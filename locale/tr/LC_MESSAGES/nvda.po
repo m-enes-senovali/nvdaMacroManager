@@ -1,0 +1,244 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: NVDAMacroManager 1.0.5\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: Muhammet Enes Senovali\n"
+"Language-Team: \n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.9\n"
+
+msgid "Macro Manager"
+msgstr "Makro Yöneticisi"
+
+msgid "Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'."
+msgstr "Güvenlik Uyarısı: Makro '{target_app}' için kilitli. Şu anki: '{current_app}'."
+
+msgid "Macro playback canceled."
+msgstr "Makro oynatımı iptal edildi."
+
+msgid "Macro playback completed."
+msgstr "Makro oynatımı tamamlandı."
+
+msgid "Edit Macro (IDE)"
+msgstr "Makroyu Düzenle (IDE)"
+
+msgid "Macro Name:"
+msgstr "Makro Adı:"
+
+msgid "Macro Name"
+msgstr "Makro Adı"
+
+msgid "Loop:"
+msgstr "Döngü:"
+
+msgid "Loop Count"
+msgstr "Döngü Sayısı"
+
+msgid "Run until stopped"
+msgstr "Durdurana kadar çalıştır"
+
+msgid "Run until stopped (Infinite Loop)"
+msgstr "Durdurana kadar çalıştır (Sonsuz Döngü)"
+
+msgid "Playback Speed Multiplier (0 = Instant):"
+msgstr "Oynatma Hızı Çarpanı (0 = Gecikmesiz):"
+
+msgid "Playback Speed. Choose a preset or type your own, like 1.3. 0 is instant."
+msgstr "Oynatma Hızı. Hazır değer seçin veya 1.3 gibi kendi hızınızı yazın. 0 gecikmesizdir."
+
+msgid "Security:"
+msgstr "Güvenlik:"
+
+msgid "Run only in '{app_name}' application"
+msgstr "Sadece '{app_name}' uygulamasında çalışsın"
+
+msgid "Lock to current active application"
+msgstr "Şu anki aktif uygulamaya kilitle"
+
+msgid "Application Lock Security"
+msgstr "Uygulama Kilidi Güvenliği"
+
+msgid "Macro Events (Keys and Delays):"
+msgstr "Makro Olayları (Tuşlar ve Gecikmeler):"
+
+msgid "Macro Events List. You can use Shift and arrow keys for multiple selection."
+msgstr "Makro Olayları Listesi. Shift ve oklarla çoklu seçim yapabilirsiniz."
+
+msgid "Edit Delay"
+msgstr "Gecikmeyi Düzenle"
+
+msgid "Delete Selected Event"
+msgstr "Seçili Olayı Sil"
+
+msgid "Move Up"
+msgstr "Yukarı Taşı"
+
+msgid "Move Down"
+msgstr "Aşağı Taşı"
+
+msgid "Save"
+msgstr "Kaydet"
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "Undone."
+msgstr "Geri alındı."
+
+msgid "Redone."
+msgstr "İleri alındı."
+
+msgid "Press-Release"
+msgstr "Bas-Çek"
+
+msgid "Wait"
+msgstr "Bekleme"
+
+msgid "Hold Time"
+msgstr "Basılı Tutma"
+
+msgid "Pressed"
+msgstr "Basıldı"
+
+msgid "Released"
+msgstr "Bırakıldı"
+
+msgid ""
+"Enter the new wait time in milliseconds (ms):\n"
+"(Example: 1000 for 1 second)"
+msgstr ""
+"Yeni bekleme süresini milisaniye (ms) cinsinden girin:\n"
+"(Örnek: 1 saniye için 1000)"
+
+msgid "Edit Wait Time"
+msgstr "Bekleme Süresi Düzenle"
+
+msgid "Wait time updated."
+msgstr "Bekleme süresi güncellendi."
+
+msgid "Error: Please enter numbers only."
+msgstr "Hata: Sadece rakam giriniz."
+
+msgid "Selected events deleted."
+msgstr "Seçili olaylar silindi."
+
+msgid "Moved up."
+msgstr "Yukarı taşındı."
+
+msgid "Moved down."
+msgstr "Aşağı taşındı."
+
+msgid "Untitled Macro"
+msgstr "İsimsiz Makro"
+
+msgid "Saved Macros:"
+msgstr "Kaydedilmiş Makrolar:"
+
+msgid "No macros yet"
+msgstr "Henüz makro yok"
+
+msgid "Saved Macros List. Supports multiple selection."
+msgstr "Kaydedilmiş Makrolar Listesi. Çoklu seçim destekler."
+
+msgid "Play"
+msgstr "Oynat"
+
+msgid "Edit"
+msgstr "Düzenle"
+
+msgid "Delete"
+msgstr "Sil"
+
+msgid "Import"
+msgstr "İçe Aktar"
+
+msgid "Export"
+msgstr "Dışa Aktar"
+
+msgid "New Macro Process ({count} Events Captured):"
+msgstr "Yeni Makro İşlemi ({count} Olay Yakalandı):"
+
+msgid "New Macro"
+msgstr "Yeni Makro"
+
+msgid "Loop Count:"
+msgstr "Döngü Sayısı:"
+
+msgid "Save Macro to Database"
+msgstr "Makroyu Veritabanına Kaydet"
+
+msgid "Close"
+msgstr "Kapat"
+
+msgid "Macro updated successfully."
+msgstr "Makro başarıyla güncellendi."
+
+msgid "Macro '{name}' deleted."
+msgstr "'{name}' makrosu silindi."
+
+msgid "{count} macros deleted."
+msgstr "{count} makro silindi."
+
+msgid "Export Macro"
+msgstr "Makroyu Dışa Aktar"
+
+msgid "Macro '{name}' exported successfully."
+msgstr "'{name}' makrosu başarıyla dışa aktarıldı."
+
+msgid "Export failed."
+msgstr "Dışa aktarma başarısız oldu."
+
+msgid "Import Macro"
+msgstr "Makroyu İçe Aktar"
+
+msgid "Macro imported successfully."
+msgstr "Makro başarıyla içe aktarıldı."
+
+msgid "Invalid macro file."
+msgstr "Geçersiz makro dosyası."
+
+msgid "Import failed."
+msgstr "İçe aktarma başarısız oldu."
+
+msgid "Macro '{name}' saved successfully."
+msgstr "'{name}' makrosu başarıyla kaydedildi."
+
+msgid "Playing: {name}"
+msgstr "Oynatılıyor: {name}"
+
+msgid "Custom Macro: {name}"
+msgstr "Özel Makro: {name}"
+
+msgid "Starts or stops live macro recording. (Keys are processed by the system)"
+msgstr "Canlı makro kaydını başlatır veya durdurur. (Tuşlar sisteme işler)"
+
+msgid "Live macro recording started."
+msgstr "Canlı makro kaydı başladı."
+
+msgid "Starts safe macro recording. (Keys are hidden from the system)"
+msgstr "Güvenli makro kaydını başlatır. (Tuşlar sistemden gizlenir)"
+
+msgid "Safe macro recording started. Keys are hidden."
+msgstr "Güvenli makro kaydı başladı. Tuşlar gizleniyor."
+
+msgid "Recording stopped. {count} events captured."
+msgstr "Kayıt durduruldu. {count} olay yakalandı."
+
+msgid "Plays the last recorded (temporary) macro. Cancels if currently playing."
+msgstr "Son kaydedilen (geçici) makroyu oynatır. Oynatma sırasındaysa iptal eder."
+
+msgid "No temporary macro to play."
+msgstr "Oynatılacak geçici makro yok."
+
+msgid "Please stop recording first."
+msgstr "Önce kaydı durdurun."
+
+msgid "Playing temporary macro..."
+msgstr "Geçici makro oynatılıyor..."
+
+msgid "Opens the Macro Manager interface."
+msgstr "Makro Yöneticisi arayüzünü açar."

@@ -1,0 +1,320 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: NVDAMacroManager 1.0.0\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: Muhammet Enes Senovali\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.9\n"
+
+msgid "Makro Yöneticisi"
+msgstr "Gestor de Macros"
+
+msgid "Makro kaydı başladı."
+msgstr "Grabación de macro iniciada."
+
+msgid "Kayıt durduruldu. {count} olay yakalandı."
+msgstr "Grabación detenida. {count} eventos capturados."
+
+msgid "Oynatılacak geçici makro yok."
+msgstr "No hay macro temporal para reproducir."
+
+msgid "Önce kaydı durdurun."
+msgstr "Por favor, detenga la grabación primero."
+
+msgid "Geçici makro oynatılıyor..."
+msgstr "Reproduciendo macro temporal..."
+
+msgid "Kayıt otomatik durduruldu."
+msgstr "Grabación detenida automáticamente."
+
+msgid "Makroyu Düzenle"
+msgstr "Editar Macro"
+
+msgid "Makro Adı:"
+msgstr "Nombre de la Macro:"
+
+msgid "Döngü:"
+msgstr "Bucle:"
+
+msgid "Durdurana kadar çalıştır"
+msgstr "Ejecutar hasta detener"
+
+msgid "Oynatma Hızı:"
+msgstr "Velocidad de reproducción:"
+
+msgid "0.5x (Yavaş)"
+msgstr "0.5x (Lento)"
+
+msgid "1x (Orijinal)"
+msgstr "1x (Original)"
+
+msgid "2x (Hızlı)"
+msgstr "2x (Rápido)"
+
+msgid "5x (Çok Hızlı)"
+msgstr "5x (Muy rápido)"
+
+msgid "Gecikmesiz"
+msgstr "Sin retraso (Instantáneo)"
+
+msgid "Güvenlik:"
+msgstr "Seguridad:"
+
+msgid "Sadece '{app_name}' uygulamasında çalışsın"
+msgstr "Ejecutar solo en la aplicación '{app_name}'"
+
+msgid "Uygulama kilidi kullanılamaz (Veri yok)"
+msgstr "Bloqueo de aplicación no disponible (Sin datos)"
+
+msgid "Güncelle"
+msgstr "Actualizar"
+
+msgid "İptal"
+msgstr "Cancelar"
+
+msgid "İsimsiz Makro"
+msgstr "Macro sin título"
+
+msgid "Kaydedilmiş Makrolar:"
+msgstr "Macros guardadas:"
+
+msgid "Henüz makro yok"
+msgstr "Aún no hay macros"
+
+msgid "Oynat"
+msgstr "Reproducir"
+
+msgid "Düzenle"
+msgstr "Editar"
+
+msgid "Sil"
+msgstr "Eliminar"
+
+msgid "İçe Aktar (Import)"
+msgstr "Importar Macro"
+
+msgid "Dışa Aktar (Export)"
+msgstr "Exportar Macro"
+
+msgid "Yeni Makro İşlemi ({count} Olay Yakalandı):"
+msgstr "Nuevo Proceso de Macro ({count} Eventos Capturados):"
+
+msgid "Yeni Makro"
+msgstr "Nueva Macro"
+
+msgid "Döngü Sayısı:"
+msgstr "Número de bucles:"
+
+msgid "Belirli bir uygulamaya bağla"
+msgstr "Vincular a una aplicación específica"
+
+msgid "Makroyu Veritabanına Kaydet"
+msgstr "Guardar Macro en la Base de Datos"
+
+msgid "Kapat"
+msgstr "Cerrar"
+
+msgid "Makro başarıyla güncellendi."
+msgstr "Macro actualizada correctamente."
+
+msgid "{name} silindi."
+msgstr "{name} eliminada."
+
+msgid "Makroyu Dışa Aktar"
+msgstr "Exportar Macro"
+
+msgid "{name} başarıyla dışa aktarıldı."
+msgstr "{name} exportada correctamente."
+
+msgid "Dışa aktarma başarısız oldu."
+msgstr "Exportación fallida."
+
+msgid "Makroyu İçe Aktar"
+msgstr "Importar Macro"
+
+msgid "{name} makrosu başarıyla içe aktarıldı."
+msgstr "Macro {name} importada correctamente."
+
+msgid "Geçersiz makro dosyası."
+msgstr "Archivo de macro no válido."
+
+msgid "İçe aktarma başarısız oldu."
+msgstr "Importación fallida."
+
+msgid "{name} başarıyla kaydedildi."
+msgstr "{name} guardada correctamente."
+
+msgid "Güvenlik Uyarısı: Makro '{target_app}' için kilitli. Şu anki: '{current_app}'."
+msgstr "Advertencia de seguridad: Macro bloqueada para '{target_app}'. Actual: '{current_app}'."
+
+msgid "Makro oynatımı iptal edildi."
+msgstr "Reproducción de macro cancelada."
+
+msgid "Makro oynatımı tamamlandı."
+msgstr "Reproducción de macro completada."
+
+msgid "Makro kayıt sürecini başlatır veya devam eden kaydı durdurur."
+msgstr "Inicia el proceso de grabación de macro o detiene la grabación en curso."
+
+msgid "Son kaydedilen veya seçili makroyu oynatır. Oynatma sırasındaysa iptal eder."
+msgstr "Reproduce la última macro grabada o seleccionada. Cancela si se está reproduciendo."
+
+msgid "Makro Yöneticisi arayüzünü açar."
+msgstr "Abre la interfaz del Gestor de Macros."
+
+msgid "Makroyu Düzenle (IDE)"
+msgstr "Editar Macro (IDE)"
+
+msgid "Şu anki aktif uygulamaya kilitle"
+msgstr "Bloquear a la aplicación activa actual"
+
+msgid "Makro Olayları (Tuşlar ve Gecikmeler):"
+msgstr "Eventos de Macro (Teclas y Retrasos):"
+
+msgid "Gecikmeyi Düzenle"
+msgstr "Editar Retraso"
+
+msgid "Seçili Olayı Sil"
+msgstr "Eliminar Evento Seleccionado"
+
+msgid "Yukarı Taşı"
+msgstr "Mover Arriba"
+
+msgid "Aşağı Taşı"
+msgstr "Mover Abajo"
+
+msgid "Basıldı"
+msgstr "Pulsada"
+
+msgid "Bırakıldı"
+msgstr "Soltada"
+
+msgid "Gecikme"
+msgstr "Retraso"
+
+msgid ""
+"Yeni gecikme süresini milisaniye (ms) cinsinden girin:\n"
+"(Örnek: 1 saniye için 1000)"
+msgstr ""
+"Introduzca el nuevo retraso en milisegundos (ms):\n"
+"(Ejemplo: 1000 para 1 segundo)"
+
+msgid "Gecikme Düzenle"
+msgstr "Editar Retraso"
+
+msgid "Gecikme güncellendi."
+msgstr "Retraso actualizado."
+
+msgid "Hata: Sadece rakam giriniz."
+msgstr "Error: Por favor, introduzca solo números."
+
+msgid "Olay silindi."
+msgstr "Evento eliminado."
+
+msgid "Yukarı taşındı."
+msgstr "Movido arriba."
+
+msgid "Aşağı taşındı."
+msgstr "Movido abajo."
+
+msgid "Oynatılıyor: {name}"
+msgstr "Reproduciendo: {name}"
+
+msgid "Makroyu Oynat: {name}"
+msgstr "Reproducir Macro: {name}"
+
+msgid "Makro Yöneticisi - Özel Kısayollar"
+msgstr "Gestor de Macros - Atajos Personalizados"
+
+msgid "Kaydet"
+msgstr "Guardar"
+
+msgid "İçe Aktar"
+msgstr "Importar"
+
+msgid "Dışa Aktar"
+msgstr "Exportar"
+
+msgid "Oynatma Hızı Çarpanı (0 = Gecikmesiz):"
+msgstr "Multiplicador de velocidad (0 = Instantáneo):"
+
+msgid "Oynatma Hızı. Hazır değer seçin veya 1.3 gibi kendi hızınızı yazın. 0 gecikmesizdir."
+msgstr "Velocidad de reproducción. Elija un valor preestablecido o escriba el suyo, como 1.3. 0 es sin retraso."
+
+msgid "Durdurana kadar çalıştır (Sonsuz Döngü)"
+msgstr "Ejecutar hasta detener (Bucle infinito)"
+
+msgid "Uygulama Kilidi Güvenliği"
+msgstr "Seguridad de bloqueo de aplicación"
+
+msgid "Kaydedilmiş Makrolar Listesi. Çoklu seçim destekler."
+msgstr "Lista de macros guardadas. Soporta selección múltiple."
+
+msgid "Makro Olayları Listesi. Shift ve oklarla çoklu seçim yapabilirsiniz."
+msgstr "Lista de eventos de macro. Puede usar Mayús y las flechas para la selección múltiple."
+
+msgid "Geri alındı."
+msgstr "Deshecho."
+
+msgid "İleri alındı."
+msgstr "Rehecho."
+
+msgid "Bas-Çek"
+msgstr "Pulsar-Soltar"
+
+msgid "Bekleme"
+msgstr "Espera"
+
+msgid "Basılı Tutma"
+msgstr "Tiempo de retención"
+
+msgid "Bekleme Süresi Düzenle"
+msgstr "Editar tiempo de espera"
+
+msgid "Bekleme süresi güncellendi."
+msgstr "Tiempo de espera actualizado."
+
+msgid ""
+"Yeni bekleme süresini milisaniye (ms) cinsinden girin:\n"
+"(Örnek: 1 saniye için 1000)"
+msgstr ""
+"Introduzca el nuevo tiempo de espera en milisegundos (ms):\n"
+"(Ejemplo: 1000 para 1 segundo)"
+
+msgid "Seçili olaylar silindi."
+msgstr "Eventos seleccionados eliminados."
+
+msgid "'{name}' makrosu silindi."
+msgstr "Macro '{name}' eliminada."
+
+msgid "{count} makro silindi."
+msgstr "{count} macros eliminadas."
+
+msgid "'{name}' makrosu başarıyla dışa aktarıldı."
+msgstr "Macro '{name}' exportada correctamente."
+
+msgid "'{name}' makrosu başarıyla içe aktarıldı."
+msgstr "Macro '{name}' importada correctamente."
+
+msgid "'{name}' makrosu başarıyla kaydedildi."
+msgstr "Macro '{name}' guardada correctamente."
+
+msgid "Özel Makro: {name}"
+msgstr "Macro personalizada: {name}"
+
+msgid "Canlı makro kaydı başladı."
+msgstr "Grabación de macro en vivo iniciada."
+
+msgid "Güvenli makro kaydı başladı. Tuşlar gizleniyor."
+msgstr "Grabación de macro segura iniciada. Las teclas están ocultas."
+
+msgid "Canlı makro kaydını başlatır veya durdurur. (Tuşlar sisteme işler)"
+msgstr "Inicia o detiene la grabación de macro en vivo. (Las teclas se procesan en el sistema)"
+
+msgid "Güvenli makro kaydını başlatır. (Tuşlar sistemden gizlenir)"
+msgstr "Inicia la grabación de macro segura. (Las teclas se ocultan al sistema)"
