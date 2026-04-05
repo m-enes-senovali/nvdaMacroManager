@@ -1,6 +1,5 @@
 msgid ""
-msgstr ""
-"Project-Id-Version: NVDAMacroManager 1.0.5\n"
+msgstr """Project-Id-Version: NVDAMacroManager 1.0.5\n"
 "POT-Creation-Date: \n"
 "PO-Revision-Date: \n"
 "Last-Translator: Muhammet Enes Senovali\n"
@@ -110,8 +109,7 @@ msgstr "Bırakıldı"
 msgid ""
 "Enter the new wait time in milliseconds (ms):\n"
 "(Example: 1000 for 1 second)"
-msgstr ""
-"Yeni bekleme süresini milisaniye (ms) cinsinden girin:\n"
+msgstr ""\n"Yeni bekleme süresini milisaniye (ms) cinsinden girin:\n"
 "(Örnek: 1 saniye için 1000)"
 
 msgid "Edit Wait Time"
@@ -242,3 +240,108 @@ msgstr "Geçici makro oynatılıyor..."
 
 msgid "Opens the Macro Manager interface."
 msgstr "Makro Yöneticisi arayüzünü açar."
+
+msgid "Edit Key"
+msgstr "Tuşu Düzenle"
+
+msgid "Option 1: Auto Capture"
+msgstr "Seçenek 1: Tuşa Basarak Yakala"
+
+msgid "Press to Capture"
+msgstr "Tuşa Basarak Yakala"
+
+msgid "Option 2: Select from List"
+msgstr "Seçenek 2: Listeden Seç"
+
+msgid "Save Selected Key"
+msgstr "Seçili Tuşu Kaydet"
+
+msgid "Please select a valid key from the list."
+msgstr "Lütfen geçerli bir tuş seçin."
+
+msgid "Key Down"
+msgstr "Tuş Aşağı"
+
+msgid "Key Up"
+msgstr "Tuş Yukarı"
+
+msgid "Press"
+msgstr "Tuşa Bas"
+
+msgid "Edit Key"
+msgstr "Tuşu Düzenle"
+
+msgid "Option 1: Auto Capture"
+msgstr "Seçenek 1: Tuşa Basarak Yakala"
+
+msgid "Press to Capture"
+msgstr "Tuşa Basarak Yakala"
+
+msgid "Option 2: Select from List"
+msgstr "Seçenek 2: Listeden Seç"
+
+msgid "Save Selected Key"
+msgstr "Seçili Tuşu Kaydet"
+
+msgid "Please select a valid key from the list."
+msgstr "Lütfen geçerli bir tuş seçin."
+
+msgid "Key Down"
+msgstr "Tuş Aşağı"
+
+msgid "Key Up"
+msgstr "Tuş Yukarı"
+
+msgid "Press"
+msgstr "Tuşa Bas"
+
+msgid "Add Event"
+msgstr "İşlem Ekle"
+
+msgid "Event Type:"
+msgstr "İşlem Türü:"
+
+msgid "Press (Bas-Çek)"
+msgstr "Tuşa Bas (Bas-Çek)"
+
+msgid "Key Down (Tuş Aşağı)"
+msgstr "Tuş Aşağı (Key Down)"
+
+msgid "Key Up (Tuş Yukarı)"
+msgstr "Tuş Yukarı (Key Up)"
+
+msgid "Delay in milliseconds (ms):\n(Example: 1000 for 1 second)"
+msgstr "Gecikme süresi (Milisaniye):\n(Örnek: 1 saniye için 1000 girin)"
+
+msgid "Event added."
+msgstr "İşlem başarıyla eklendi."
+
+msgid "Save Selected Key/Delay"
+msgstr "Seçilmiş Tuşu/Gecikmeyi Kaydet"
+
+msgid "Selection cleared."
+msgstr "Seçimler kaldırıldı."
+
+msgid "{count} events copied."
+msgstr "{count} işlem kopyalandı."
+
+msgid "{count} events pasted."
+msgstr "{count} işlem yapıştırıldı."
+
+msgid "Letters (Harfler)"
+msgstr "Harfler"
+
+msgid "Punctuation (Yazım İşaretleri)"
+msgstr "Noktalama İşaretleri"
+
+msgid "Numbers (Sayılar)"
+msgstr "Rakamlar"
+
+msgid "Function (F) Keys"
+msgstr "Fonksiyon (F) Tuşları"
+
+msgid "Navigation (Yön ve Gezinme)"
+msgstr "Yön Tuşları"
+
+msgid "System & Edit (Sistem)"
+msgstr "Sistem Tuşları"
