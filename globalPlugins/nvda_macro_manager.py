@@ -307,15 +307,358 @@ class MacroEngine:
         thread.start()
 
 
+class KeyCaptureDialog(wx.Dialog):
+    def __init__(self, parent):
+        super(KeyCaptureDialog, self).__init__(parent, title=_("Press a New Key"), size=(350, 150), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+        self.captured_vk = None
+        self.captured_scan = None
+        self.captured_ext = False
+        
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        lbl = wx.StaticText(self, label=_("Please press the new key on your keyboard...\n(It will be captured automatically)"))
+        lbl.Wrap(300)
+        sizer.Add(lbl, 1, wx.ALL | wx.ALIGN_CENTER, 20)
+        
+        self.SetSizer(sizer)
+        self.Bind(wx.EVT_CHAR_HOOK, self.on_key)
+        apply_dark_theme(self)
+        self.CenterOnParent()
+        
+    def on_key(self, event):
+        raw_vk = event.GetRawKeyCode()
+        raw_flags = event.GetRawKeyFlags()
+        
+        if raw_vk:
+            self.captured_vk = raw_vk
+            self.captured_scan = (raw_flags >> 16) & 0xFF
+            self.captured_ext = (raw_flags >> 24) & 1 == 1
+        else:
+            self.captured_vk = event.GetKeyCode()
+            self.captured_scan = 0
+            self.captured_ext = False
+            
+        self.EndModal(wx.ID_OK)
+
+
+class KeySelectDialog(wx.Dialog):
+    @classmethod
+    def get_dynamic_vk_mapping(cls):
+        options = []
+        user32 = ctypes.windll.user32
+        
+        letters_map = {}
+        for vk in range(65, 91):
+            letters_map[chr(vk)] = vk
+            
+        sym_map = {
+            ".": ". (Nokta)",
+            ",": ", (Virgül)",
+            "-": "- (Tire / Eksi)",
+            '"': '\" (Tırnak)',
+            "<": "< (Küçüktür)",
+            ">": "> (Büyüktür)",
+            ";": "; (Noktalı Virgül)",
+            ":": ": (İki Nokta)",
+            "'": "' (Tek Tırnak)",
+            "`": "` (Kesme / Vurgu)",
+            "~": "~ (Tilde)",
+            "=": "= (Eşittir)",
+            "+": "+ (Artı)",
+            "[": "[ (Sol Köşeli Parantez)",
+            "]": "] (Sağ Köşeli Parantez)",
+            "{": "{ (Sol Süslü Parantez)",
+            "}": "} (Sağ Süslü Parantez)",
+            "\\": "\\ (Ters Eğik Çizgi)",
+            "/": "/ (Eğik Çizgi)",
+            "|": "| (Düz Çizgi)",
+            "?": "? (Soru İşareti)",
+            "!": "! (Ünlem)",
+            "@": "@ (Bulunma / At)",
+            "#": "# (Kare)",
+            "$": "$ (Dolar)",
+            "%": "% (Yüzde)",
+            "^": "^ (Şapka)",
+            "&": "& (Ve)",
+            "*": "* (Yıldız / Çarpı)",
+            "(": "( (Sol Parantez)",
+            ")": ") (Sağ Parantez)",
+            "_": "_ (Alt Tire)"
+        }
+        
+        local_chars = []
+        for vk in range(186, 223):
+            char_val = user32.MapVirtualKeyW(vk, 2) & 0xFFFF
+            if char_val > 0:
+                try:
+                    char_str = chr(char_val)
+                    if char_str == 'i': char_str = 'İ'
+                    elif char_str == 'ı': char_str = 'I'
+                    elif char_str == 'ğ': char_str = 'Ğ'
+                    elif char_str == 'ü': char_str = 'Ü'
+                    elif char_str == 'ş': char_str = 'Ş'
+                    elif char_str == 'ö': char_str = 'Ö'
+                    elif char_str == 'ç': char_str = 'Ç'
+                    else: char_str = char_str.upper()
+                    
+                    if char_str.strip():
+                        if char_str.isalpha():
+                            letters_map[char_str] = vk
+                        else:
+                            display_name = sym_map.get(char_str, char_str)
+                            local_chars.append((display_name, vk))
+                except ValueError: pass
+                
+        def char_sort_key(char):
+            order = "ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZ"
+            return order.index(char) if char in order else 1000 + ord(char)
+            
+        sorted_letters = sorted(letters_map.items(), key=lambda item: char_sort_key(item[0]))
+        options.append((f"--- {_('Letters (Harfler)')} ---", 0))
+        options.extend(sorted_letters)
+        
+        if local_chars:
+            local_chars.sort(key=lambda x: x[0])
+            options.append((f"--- {_('Punctuation (Yazım İşaretleri)')} ---", 0))
+            options.extend(local_chars)
+            
+        options.append((f"--- {_('Numbers (Sayılar)')} ---", 0))
+        for vk in range(48, 58):
+            options.append((chr(vk), vk))
+            
+        options.append((f"--- {_('Numpad')} ---", 0))
+        for i in range(10):
+            options.append((f"Numpad {i}", 96 + i))
+        options.extend([
+            (_("Numpad Multiply (Çarp)"), 106),
+            (_("Numpad Add (Topla)"), 107),
+            (_("Numpad Subtract (Çıkar)"), 109),
+            (_("Numpad Decimal (Ondalık)"), 110),
+            (_("Numpad Divide (Böl)"), 111),
+        ])
+        
+        options.append((f"--- {_('Function (F) Keys')} ---", 0))
+        for i in range(1, 13):
+            options.append((f"F{i}", 111 + i))
+            
+        options.append((f"--- {_('Navigation (Yön ve Gezinme)')} ---", 0))
+        options.extend([
+            (_("Left Arrow (Sol Ok)"), 37),
+            (_("Up Arrow (Yukarı Ok)"), 38),
+            (_("Right Arrow (Sağ Ok)"), 39),
+            (_("Down Arrow (Aşağı Ok)"), 40),
+            (_("Page Up (Sayfa Yukarı)"), 33),
+            (_("Page Down (Sayfa Aşağı)"), 34),
+            (_("Home (Baş)"), 36),
+            (_("End (Son)"), 35),
+        ])
+        
+        options.append((f"--- {_('System & Edit (Sistem)')} ---", 0))
+        options.extend([
+            (_("Backspace (Geri Sil)"), 8),
+            (_("Tab (Sekme)"), 9),
+            (_("Enter"), 13),
+            (_("Space (Boşluk)"), 32),
+            (_("Insert (Araya Ekle)"), 45),
+            (_("Delete (Sil)"), 46),
+            (_("Escape (İptal)"), 27),
+            (_("Shift"), 16),
+            (_("Ctrl"), 17),
+            (_("Alt"), 18),
+            (_("Win (Başlat)"), 91),
+            (_("Menu (Bağlam/Uygulama)"), 93),
+            (_("Caps Lock (Büyük Harf Kilidi)"), 20),
+            (_("Num Lock (Sayı Kilidi)"), 144),
+            (_("Scroll Lock (Kaydırma Kilidi)"), 145),
+            (_("Pause (Duraklat)"), 19),
+            (_("Print Screen (Ekran Görüntüsü)"), 44),
+        ])
+        return options
+
+    def __init__(self, parent):
+        super(KeySelectDialog, self).__init__(parent, title=_("Edit Key"), size=(350, 250), style=wx.DEFAULT_DIALOG_STYLE)
+        self.captured_vk = None
+        self.captured_scan = 0
+        self.captured_ext = False
+        self.VK_OPTIONS = self.get_dynamic_vk_mapping()
+        
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        lbl_auto = wx.StaticText(self, label=_("Option 1: Auto Capture"))
+        main_sizer.Add(lbl_auto, 0, wx.ALL, 10)
+        
+        self.btn_capture = wx.Button(self, label=_("Press to Capture"))
+        self.btn_capture.Bind(wx.EVT_BUTTON, self.on_capture_click)
+        main_sizer.Add(self.btn_capture, 0, wx.ALL | wx.EXPAND, 10)
+        
+        main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.ALL, 10)
+        
+        lbl_manual = wx.StaticText(self, label=_("Option 2: Select from List"))
+        main_sizer.Add(lbl_manual, 0, wx.ALL, 10)
+        
+        choices = [item[0] for item in self.VK_OPTIONS]
+        self.key_combo = wx.Choice(self, choices=choices)
+        self.key_combo.SetSelection(0)
+        main_sizer.Add(self.key_combo, 0, wx.ALL | wx.EXPAND, 10)
+        
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_save_combo = wx.Button(self, wx.ID_OK, label=_("Save Selected Key"))
+        self.btn_save_combo.Bind(wx.EVT_BUTTON, self.on_save_combo)
+        self.btn_cancel = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        
+        btn_sizer.Add(self.btn_save_combo, 0, wx.ALL, 5)
+        btn_sizer.Add(self.btn_cancel, 0, wx.ALL, 5)
+        main_sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER)
+        
+        self.SetSizer(main_sizer)
+        apply_dark_theme(self)
+        self.CenterOnParent()
+        
+    def on_capture_click(self, event):
+        dlg = KeyCaptureDialog(self)
+        if dlg.ShowModal() == wx.ID_OK and dlg.captured_vk:
+            self.captured_vk = dlg.captured_vk
+            self.captured_scan = dlg.captured_scan
+            self.captured_ext = dlg.captured_ext
+            dlg.Destroy()
+            self.EndModal(wx.ID_OK)
+        else:
+            dlg.Destroy()
+            
+    def on_save_combo(self, event):
+        idx = self.key_combo.GetSelection()
+        if idx != wx.NOT_FOUND:
+            vk = self.VK_OPTIONS[idx][1]
+            if vk != 0:
+                self.captured_vk = vk
+                self.captured_scan = 0
+                self.captured_ext = False
+                self.EndModal(wx.ID_OK)
+                return
+        ui.message(_("Please select a valid key from the list."))
+
+
+class AddEventDialog(wx.Dialog):
+    def __init__(self, parent):
+        super(AddEventDialog, self).__init__(parent, title=_("Add Event"), size=(400, 350), style=wx.DEFAULT_DIALOG_STYLE)
+        self.new_event = None
+        self.VK_OPTIONS = KeySelectDialog.get_dynamic_vk_mapping()
+        
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        main_sizer.Add(wx.StaticText(self, label=_("Event Type:")), 0, wx.ALL, 10)
+        self.type_choices = [
+            _("Press (Bas-Çek)"), 
+            _("Key Down (Tuş Aşağı)"), 
+            _("Key Up (Tuş Yukarı)"), 
+            _("Wait")
+        ]
+        self.type_values = ["press", "keyDown", "keyUp", "delay"]
+        self.type_combo = wx.Choice(self, choices=self.type_choices)
+        self.type_combo.SetSelection(0)
+        self.type_combo.Bind(wx.EVT_CHOICE, self.on_type_change)
+        main_sizer.Add(self.type_combo, 0, wx.ALL | wx.EXPAND, 10)
+        
+        main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.ALL, 10)
+        
+        self.wait_panel = wx.Panel(self)
+        wait_sizer = wx.BoxSizer(wx.VERTICAL)
+        wait_sizer.Add(wx.StaticText(self.wait_panel, label=_("Delay in milliseconds (ms):\n(Example: 1000 for 1 second)")), 0, wx.ALL, 5)
+        self.delay_ctrl = wx.TextCtrl(self.wait_panel, value="100")
+        wait_sizer.Add(self.delay_ctrl, 0, wx.ALL | wx.EXPAND, 5)
+        self.wait_panel.SetSizer(wait_sizer)
+        
+        self.key_panel = wx.Panel(self)
+        key_sizer = wx.BoxSizer(wx.VERTICAL)
+        key_sizer.Add(wx.StaticText(self.key_panel, label=_("Option 1: Auto Capture")), 0, wx.ALL, 5)
+        self.btn_capture = wx.Button(self.key_panel, label=_("Press to Capture"))
+        self.btn_capture.Bind(wx.EVT_BUTTON, self.on_capture_click)
+        key_sizer.Add(self.btn_capture, 0, wx.ALL | wx.EXPAND, 5)
+        
+        key_sizer.Add(wx.StaticText(self.key_panel, label=_("Option 2: Select from List")), 0, wx.ALL, 5)
+        combo_choices = [item[0] for item in self.VK_OPTIONS]
+        self.key_combo = wx.Choice(self.key_panel, choices=combo_choices)
+        self.key_combo.SetSelection(0)
+        key_sizer.Add(self.key_combo, 0, wx.ALL | wx.EXPAND, 5)
+        self.key_panel.SetSizer(key_sizer)
+        
+        main_sizer.Add(self.wait_panel, 0, wx.EXPAND | wx.ALL, 5)
+        main_sizer.Add(self.key_panel, 0, wx.EXPAND | wx.ALL, 5)
+        
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_save = wx.Button(self, wx.ID_OK, label=_("Add Event"))
+        self.btn_save.Bind(wx.EVT_BUTTON, self.on_save)
+        self.btn_cancel = wx.Button(self, wx.ID_CANCEL, label=_("Cancel"))
+        btn_sizer.Add(self.btn_save, 0, wx.ALL, 5)
+        btn_sizer.Add(self.btn_cancel, 0, wx.ALL, 5)
+        main_sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER)
+        
+        self.SetSizer(main_sizer)
+        self.update_visibility()
+        apply_dark_theme(self)
+        self.CenterOnParent()
+        
+    def on_type_change(self, event):
+        self.update_visibility()
+        
+    def update_visibility(self):
+        sel_type = self.type_values[self.type_combo.GetSelection()]
+        if sel_type == "delay":
+            self.wait_panel.Show()
+            self.key_panel.Hide()
+        else:
+            self.wait_panel.Hide()
+            self.key_panel.Show()
+        self.Layout()
+        
+    def on_capture_click(self, event):
+        dlg = KeyCaptureDialog(self)
+        if dlg.ShowModal() == wx.ID_OK and dlg.captured_vk:
+            self.new_event = {
+                "type": self.type_values[self.type_combo.GetSelection()],
+                "vkCode": dlg.captured_vk,
+                "scanCode": dlg.captured_scan,
+                "extended": dlg.captured_ext
+            }
+            dlg.Destroy()
+            self.EndModal(wx.ID_OK)
+        else:
+            dlg.Destroy()
+
+    def on_save(self, event):
+        sel_type = self.type_values[self.type_combo.GetSelection()]
+        if sel_type == "delay":
+            val = self.delay_ctrl.GetValue().strip()
+            if val.isdigit():
+                self.new_event = {"type": "delay", "delay": int(val) / 1000.0}
+                self.EndModal(wx.ID_OK)
+            else:
+                ui.message(_("Error: Please enter numbers only."))
+        else:
+            idx = self.key_combo.GetSelection()
+            if idx != wx.NOT_FOUND:
+                vk = self.VK_OPTIONS[idx][1]
+                if vk != 0:
+                    self.new_event = {
+                        "type": sel_type,
+                        "vkCode": vk,
+                        "scanCode": 0,
+                        "extended": False
+                    }
+                    self.EndModal(wx.ID_OK)
+                    return
+            ui.message(_("Please select a valid key from the list."))
+
+
 class MacroEditDialog(wx.Dialog):
     def __init__(self, parent, macro_data):
         super(MacroEditDialog, self).__init__(parent, title=_("Edit Macro (IDE)"), size=(600, 650))
         self.macro_data = macro_data
-        self.events_copy = copy.deepcopy(macro_data.get("events", []))
-        self.ui_to_events = [] 
+        original_events = copy.deepcopy(macro_data.get("events", []))
+        self.linear_events = self._linearize_events(original_events)
         
         self.undo_stack = []
         self.redo_stack = []
+        self.clipboard_events = []
         
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         grid_sizer = wx.FlexGridSizer(4, 2, 5, 5)
@@ -361,21 +704,33 @@ class MacroEditDialog(wx.Dialog):
         main_sizer.Add(self.events_label, 0, wx.LEFT | wx.RIGHT, 10)
         self.events_list = wx.ListBox(self, choices=self._build_event_strings(), style=wx.LB_EXTENDED)
         self.events_list.SetName(_("Macro Events List. You can use Shift and arrow keys for multiple selection."))
+        self.events_list.Bind(wx.EVT_LISTBOX, self.on_list_select)
         main_sizer.Add(self.events_list, 1, wx.ALL | wx.EXPAND, 10)
         
-        event_btn_sizer = wx.GridSizer(2, 2, 5, 5)
+        event_btn_sizer = wx.GridSizer(3, 2, 5, 5)
         self.btn_edit_delay = wx.Button(self, label=_("Edit Delay"))
         self.btn_edit_delay.Bind(wx.EVT_BUTTON, self.on_edit_delay)
         event_btn_sizer.Add(self.btn_edit_delay, 0, wx.EXPAND)
+
+        self.btn_edit_key = wx.Button(self, label=_("Edit Key"))
+        self.btn_edit_key.Bind(wx.EVT_BUTTON, self.on_edit_key)
+        event_btn_sizer.Add(self.btn_edit_key, 0, wx.EXPAND)
+        
         self.btn_del_event = wx.Button(self, label=_("Delete Selected Event"))
         self.btn_del_event.Bind(wx.EVT_BUTTON, self.on_delete_event)
         event_btn_sizer.Add(self.btn_del_event, 0, wx.EXPAND)
+
         self.btn_move_up = wx.Button(self, label=_("Move Up"))
         self.btn_move_up.Bind(wx.EVT_BUTTON, self.on_move_up)
         event_btn_sizer.Add(self.btn_move_up, 0, wx.EXPAND)
+        
         self.btn_move_down = wx.Button(self, label=_("Move Down"))
         self.btn_move_down.Bind(wx.EVT_BUTTON, self.on_move_down)
         event_btn_sizer.Add(self.btn_move_down, 0, wx.EXPAND)
+        
+        self.btn_add_event = wx.Button(self, label=_("Add Event"))
+        self.btn_add_event.Bind(wx.EVT_BUTTON, self.on_add_event)
+        event_btn_sizer.Add(self.btn_add_event, 0, wx.EXPAND)
         main_sizer.Add(event_btn_sizer, 0, wx.ALL | wx.EXPAND, 10)
         
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -394,84 +749,224 @@ class MacroEditDialog(wx.Dialog):
         down_id = wx.NewIdRef()
         undo_id = wx.NewIdRef()
         redo_id = wx.NewIdRef()
+        copy_id = wx.NewIdRef()
+        cut_id = wx.NewIdRef()
+        paste_id = wx.NewIdRef()
         
         self.Bind(wx.EVT_MENU, self.on_delete_event, id=del_id)
         self.Bind(wx.EVT_MENU, self.on_move_up, id=up_id)
         self.Bind(wx.EVT_MENU, self.on_move_down, id=down_id)
         self.Bind(wx.EVT_MENU, self.on_undo, id=undo_id)
         self.Bind(wx.EVT_MENU, self.on_redo, id=redo_id)
+        self.Bind(wx.EVT_MENU, self.on_copy, id=copy_id)
+        self.Bind(wx.EVT_MENU, self.on_cut, id=cut_id)
+        self.Bind(wx.EVT_MENU, self.on_paste, id=paste_id)
         
         accel_tbl = wx.AcceleratorTable([
             (wx.ACCEL_NORMAL, wx.WXK_DELETE, del_id),
             (wx.ACCEL_CTRL, wx.WXK_UP, up_id),
             (wx.ACCEL_CTRL, wx.WXK_DOWN, down_id),
             (wx.ACCEL_CTRL, ord('Z'), undo_id),
-            (wx.ACCEL_CTRL, ord('Y'), redo_id)
+            (wx.ACCEL_CTRL, ord('Y'), redo_id),
+            (wx.ACCEL_CTRL, ord('C'), copy_id),
+            (wx.ACCEL_CTRL, ord('X'), cut_id),
+            (wx.ACCEL_CTRL, ord('V'), paste_id)
         ])
         self.SetAcceleratorTable(accel_tbl)
+        wx.CallAfter(self.on_list_select, None)
+
+    def on_copy(self, event):
+        sels = self.events_list.GetSelections()
+        if not sels: return
+        self.clipboard_events = [copy.deepcopy(self.linear_events[i]) for i in sels]
+        ui.message(_("{count} events copied.").format(count=len(self.clipboard_events)))
+
+    def on_cut(self, event):
+        sels = self.events_list.GetSelections()
+        if not sels: return
+        self.on_copy(None)
+        self.on_delete_event(None)
+
+    def on_paste(self, event):
+        if not self.clipboard_events: return
+        self.save_history()
+        sels = list(self.events_list.GetSelections())
+        insert_idx = max(sels) + 1 if sels else len(self.linear_events)
+        
+        for e in reversed(self.clipboard_events):
+            self.linear_events.insert(insert_idx, copy.deepcopy(e))
+            
+        self.events_list.Set(self._build_event_strings())
+        for i in range(self.events_list.GetCount()): self.events_list.Deselect(i)
+        for i in range(len(self.clipboard_events)):
+            self.events_list.Select(insert_idx + i)
+            
+        ui.message(_("{count} events pasted.").format(count=len(self.clipboard_events)))
+        wx.CallAfter(self.on_list_select, None)
+        self.events_list.SetFocus()
+
+    def on_list_select(self, event):
+        sels = self.events_list.GetSelections()
+        if not sels:
+            self.btn_edit_delay.Disable()
+            self.btn_edit_key.Disable()
+            self.btn_del_event.Disable()
+            self.btn_move_up.Disable()
+            self.btn_move_down.Disable()
+            return
+
+        self.btn_del_event.Enable()
+        self.btn_move_up.Enable(not (0 in sels))
+        self.btn_move_down.Enable(not (len(self.linear_events) - 1 in sels))
+
+        has_delay = any(self.linear_events[s]["type"] == "delay" for s in sels)
+        has_key = any(self.linear_events[s]["type"] != "delay" for s in sels)
+        self.btn_edit_delay.Enable(has_delay and not has_key) 
+        self.btn_edit_key.Enable(has_key and not has_delay)
+
+    def on_add_event(self, event):
+        dlg = AddEventDialog(self)
+        if dlg.ShowModal() == wx.ID_OK and dlg.new_event:
+            self.save_history()
+            sels = list(self.events_list.GetSelections())
+            if sels:
+                insert_idx = max(sels) + 1
+            else:
+                insert_idx = len(self.linear_events)
+                
+            self.linear_events.insert(insert_idx, dlg.new_event)
+            self.events_list.Set(self._build_event_strings())
+            
+            for i in range(self.events_list.GetCount()): self.events_list.Deselect(i)
+            self.events_list.SetSelection(insert_idx)
+            ui.message(_("Event added."))
+        dlg.Destroy()
+        wx.CallAfter(self.on_list_select, None)
+        self.events_list.SetFocus()
+
+    def _linearize_events(self, events):
+        linear = []
+        i = 0
+        modifiers = {16, 17, 18, 20, 91, 92, 160, 161, 162, 163, 164, 165}
+        while i < len(events):
+            e1 = events[i]
+            if e1.get("delay", 0) > 0.001:
+                linear.append({"type": "delay", "delay": e1["delay"]})
+            if i + 1 < len(events) and e1["vkCode"] not in modifiers:
+                e2 = events[i+1]
+                if e1["action"] == "keyDown" and e2["action"] == "keyUp" and e1["vkCode"] == e2["vkCode"]:
+                    linear.append({"type": "press", "vkCode": e1["vkCode"], "scanCode": e1["scanCode"], "extended": e1.get("extended", False)})
+                    i += 2
+                    continue
+            linear.append({"type": e1["action"], "vkCode": e1["vkCode"], "scanCode": e1["scanCode"], "extended": e1.get("extended", False)})
+            i += 1
+        return linear
+
+    def _rebuild_events(self, linear):
+        rebuilt = []
+        current_delay = 0.0
+        for e in linear:
+            if e["type"] == "delay":
+                current_delay += e["delay"]
+            elif e["type"] == "press":
+                rebuilt.append({"action": "keyDown", "vkCode": e["vkCode"], "scanCode": e["scanCode"], "extended": e["extended"], "delay": current_delay})
+                current_delay = 0.035
+                rebuilt.append({"action": "keyUp", "vkCode": e["vkCode"], "scanCode": e["scanCode"], "extended": e["extended"], "delay": current_delay})
+                current_delay = 0.0
+            else:
+                rebuilt.append({"action": e["type"], "vkCode": e["vkCode"], "scanCode": e["scanCode"], "extended": e["extended"], "delay": current_delay})
+                current_delay = 0.0
+        return rebuilt
 
     def save_history(self):
-        self.undo_stack.append(copy.deepcopy(self.events_copy))
+        self.undo_stack.append(copy.deepcopy(self.linear_events))
         self.redo_stack.clear()
 
     def on_undo(self, event):
         if self.undo_stack:
-            self.redo_stack.append(copy.deepcopy(self.events_copy))
-            self.events_copy = self.undo_stack.pop()
+            self.redo_stack.append(copy.deepcopy(self.linear_events))
+            self.linear_events = self.undo_stack.pop()
             self.events_list.Set(self._build_event_strings())
             ui.message(_("Undone."))
 
     def on_redo(self, event):
         if self.redo_stack:
-            self.undo_stack.append(copy.deepcopy(self.events_copy))
-            self.events_copy = self.redo_stack.pop()
+            self.undo_stack.append(copy.deepcopy(self.linear_events))
+            self.linear_events = self.redo_stack.pop()
             self.events_list.Set(self._build_event_strings())
             ui.message(_("Redone."))
 
     def on_escape_press(self, event):
-        if event.GetKeyCode() == wx.WXK_ESCAPE: self.EndModal(wx.ID_CANCEL)
-        else: event.Skip()
+        active_win = wx.Window.FindFocus()
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
+            if active_win == self.events_list:
+                for i in range(self.events_list.GetCount()): self.events_list.Deselect(i)
+                self.on_list_select(None)
+                ui.message(_("Selection cleared."))
+            else:
+                self.EndModal(wx.ID_CANCEL)
+        elif event.GetKeyCode() == wx.WXK_SPACE and event.ControlDown():
+            if active_win == self.events_list:
+                idx = self.events_list.GetSelection()
+                if idx != wx.NOT_FOUND:
+                    if self.events_list.IsSelected(idx): self.events_list.Deselect(idx)
+                    else: self.events_list.Select(idx)
+                    self.on_list_select(None)
+        else:
+            event.Skip()
 
     def _build_event_strings(self):
-        self.ui_to_events = []
         str_list = []
-        i = 0
         ui_idx = 1
-        while i < len(self.events_copy):
-            e1 = self.events_copy[i]
-            if i + 1 < len(self.events_copy):
-                e2 = self.events_copy[i+1]
-                if e1["action"] == "keyDown" and e2["action"] == "keyUp" and e1["vkCode"] == e2["vkCode"]:
-                    self.ui_to_events.append([i, i+1])
-                    key_name = get_key_name(e1["vkCode"], e1["scanCode"], e1.get("extended", False))
-                    str_item = f"{ui_idx}. [{_('Press-Release')}] {key_name} - {_('Wait')}: {int(e1['delay'] * 1000)}ms, {_('Hold Time')}: {int(e2['delay'] * 1000)}ms"
-                    str_list.append(str_item)
-                    i += 2
-                    ui_idx += 1
-                    continue
-            self.ui_to_events.append([i])
-            key_name = get_key_name(e1["vkCode"], e1["scanCode"], e1.get("extended", False))
-            action_str = _("Pressed") if e1["action"] == "keyDown" else _("Released")
-            str_item = f"{ui_idx}. [{action_str}] {key_name} - {_('Wait')}: {int(e1['delay'] * 1000)}ms"
-            str_list.append(str_item)
-            i += 1
+        for e in self.linear_events:
+            if e["type"] == "delay":
+                str_list.append(f"{ui_idx}. {_('Wait')}: {int(e['delay'] * 1000)} ms")
+            elif e["type"] == "press":
+                key_name = get_key_name(e["vkCode"], e["scanCode"], e["extended"])
+                str_list.append(f"{ui_idx}. {_('Press')}: {key_name}")
+            elif e["type"] == "keyDown":
+                key_name = get_key_name(e["vkCode"], e["scanCode"], e["extended"])
+                str_list.append(f"{ui_idx}. {_('Key Down')}: {key_name}")
+            elif e["type"] == "keyUp":
+                key_name = get_key_name(e["vkCode"], e["scanCode"], e["extended"])
+                str_list.append(f"{ui_idx}. {_('Key Up')}: {key_name}")
             ui_idx += 1
         return str_list
+
+    def on_edit_key(self, event):
+        sels = list(self.events_list.GetSelections())
+        if sels:
+            dlg = KeySelectDialog(self)
+            if dlg.ShowModal() == wx.ID_OK and dlg.captured_vk:
+                self.save_history()
+                for s in sels:
+                    if self.linear_events[s]["type"] != "delay":
+                        self.linear_events[s]["vkCode"] = dlg.captured_vk
+                        self.linear_events[s]["scanCode"] = dlg.captured_scan
+                        self.linear_events[s]["extended"] = dlg.captured_ext
+                self.events_list.Set(self._build_event_strings())
+                for i in range(self.events_list.GetCount()): self.events_list.Deselect(i)
+                for s in sels: self.events_list.SetSelection(s)
+                ui.message(_("Key updated."))
+            dlg.Destroy()
+            wx.CallAfter(self.on_list_select, None)
+            self.events_list.SetFocus()
 
     def on_edit_delay(self, event):
         sels = list(self.events_list.GetSelections())
         if sels:
-            first_event_idx = self.ui_to_events[sels[0]][0]
-            current_delay_ms = int(self.events_copy[first_event_idx]["delay"] * 1000)
-            dlg = wx.TextEntryDialog(self, _("Enter the new wait time in milliseconds (ms):\n(Example: 1000 for 1 second)"), _("Edit Wait Time"), value=str(current_delay_ms))
+            val_ms = 100
+            if self.linear_events[sels[0]]["type"] == "delay":
+                val_ms = int(self.linear_events[sels[0]]["delay"] * 1000)
+            dlg = wx.TextEntryDialog(self, _("Enter the new wait time in milliseconds (ms):\n(Example: 1000 for 1 second)"), _("Edit Wait Time"), value=str(val_ms))
             if dlg.ShowModal() == wx.ID_OK:
                 val = dlg.GetValue().strip()
                 if val.isdigit():
                     self.save_history()
                     new_delay_sec = int(val) / 1000.0
                     for s in sels:
-                        e_idx = self.ui_to_events[s][0]
-                        self.events_copy[e_idx]["delay"] = new_delay_sec
+                        if self.linear_events[s]["type"] == "delay":
+                            self.linear_events[s]["delay"] = new_delay_sec
                     self.events_list.Set(self._build_event_strings())
                     for i in range(self.events_list.GetCount()): self.events_list.Deselect(i)
                     for s in sels: self.events_list.SetSelection(s)
@@ -479,6 +974,7 @@ class MacroEditDialog(wx.Dialog):
                 else:
                     ui.message(_("Error: Please enter numbers only."))
             dlg.Destroy()
+            wx.CallAfter(self.on_list_select, None)
             self.events_list.SetFocus()
 
     def on_delete_event(self, event):
@@ -486,12 +982,12 @@ class MacroEditDialog(wx.Dialog):
         if sels:
             self.save_history()
             sels.sort(reverse=True)
-            blocks = [[self.events_copy[idx] for idx in indices] for indices in self.ui_to_events]
-            for s in sels: blocks.pop(s)
-            self.events_copy = [e for b in blocks for e in b]
+            for s in sels:
+                self.linear_events.pop(s)
             self.events_list.Set(self._build_event_strings())
             if self.events_list.GetCount() > 0: self.events_list.SetSelection(max(0, sels[-1] - 1))
             ui.message(_("Selected events deleted."))
+            wx.CallAfter(self.on_list_select, None)
             self.events_list.SetFocus()
 
     def on_move_up(self, event):
@@ -499,9 +995,8 @@ class MacroEditDialog(wx.Dialog):
         if sels and sels[0] > 0:
             self.save_history()
             sels.sort()
-            blocks = [[self.events_copy[idx] for idx in indices] for indices in self.ui_to_events]
-            for s in sels: blocks[s], blocks[s-1] = blocks[s-1], blocks[s]
-            self.events_copy = [e for b in blocks for e in b]
+            for s in sels:
+                self.linear_events[s], self.linear_events[s-1] = self.linear_events[s-1], self.linear_events[s]
             self.events_list.Set(self._build_event_strings())
             for i in range(self.events_list.GetCount()): self.events_list.Deselect(i)
             for s in sels: self.events_list.SetSelection(s - 1)
@@ -510,12 +1005,11 @@ class MacroEditDialog(wx.Dialog):
 
     def on_move_down(self, event):
         sels = list(self.events_list.GetSelections())
-        if sels and sels[-1] < len(self.ui_to_events) - 1:
+        if sels and sels[-1] < len(self.linear_events) - 1:
             self.save_history()
             sels.sort(reverse=True)
-            blocks = [[self.events_copy[idx] for idx in indices] for indices in self.ui_to_events]
-            for s in sels: blocks[s], blocks[s+1] = blocks[s+1], blocks[s]
-            self.events_copy = [e for b in blocks for e in b]
+            for s in sels:
+                self.linear_events[s], self.linear_events[s+1] = self.linear_events[s+1], self.linear_events[s]
             self.events_list.Set(self._build_event_strings())
             for i in range(self.events_list.GetCount()): self.events_list.Deselect(i)
             for s in sels: self.events_list.SetSelection(s + 1)
@@ -542,7 +1036,7 @@ class MacroEditDialog(wx.Dialog):
         return {
             "name": self.name_text.GetValue().strip() or _("Untitled Macro"),
             "loop_count": loop_c, "speed": self._parse_speed(), 
-            "target_app": final_target, "events": self.events_copy
+            "target_app": final_target, "events": self._rebuild_events(self.linear_events)
         }
 
 

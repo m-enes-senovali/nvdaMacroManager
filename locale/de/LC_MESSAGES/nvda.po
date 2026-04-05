@@ -1,6 +1,5 @@
 msgid ""
-msgstr ""
-"Project-Id-Version: NVDAMacroManager 1.0.0\n"
+msgstr """Project-Id-Version: NVDAMacroManager 1.0.0\n"
 "POT-Creation-Date: \n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
@@ -200,8 +199,7 @@ msgstr "Verzögerung"
 msgid ""
 "Yeni gecikme süresini milisaniye (ms) cinsinden girin:\n"
 "(Örnek: 1 saniye için 1000)"
-msgstr ""
-"Geben Sie die neue Verzögerung in Millisekunden (ms) ein:\n"
+msgstr ""\n"Geben Sie die neue Verzögerung in Millisekunden (ms) ein:\n"
 "(Beispiel: 1000 für 1 Sekunde)"
 
 msgid "Gecikme Düzenle"
@@ -282,8 +280,7 @@ msgstr "Wartezeit aktualisiert."
 msgid ""
 "Yeni bekleme süresini milisaniye (ms) cinsinden girin:\n"
 "(Örnek: 1 saniye için 1000)"
-msgstr ""
-"Geben Sie die neue Wartezeit in Millisekunden (ms) ein:\n"
+msgstr ""\n"Geben Sie die neue Wartezeit in Millisekunden (ms) ein:\n"
 "(Beispiel: 1000 für 1 Sekunde)"
 
 msgid "Seçili olaylar silindi."
@@ -318,3 +315,69 @@ msgstr "Startet oder stoppt die Live-Makroaufzeichnung. (Tasten werden vom Syste
 
 msgid "Güvenli makro kaydını başlatır. (Tuşlar sistemden gizlenir)"
 msgstr "Startet die sichere Makroaufzeichnung. (Tasten werden vor dem System verborgen)"
+
+msgid "Edit Macro (IDE)"
+msgstr "Makro bearbeiten (IDE)"
+
+msgid "Add Event"
+msgstr "Aktion hinzufügen"
+
+msgid "Event Type:"
+msgstr "Aktionstyp:"
+
+msgid "Press (Bas-Çek)"
+msgstr "Taste drücken"
+
+msgid "Key Down (Tuş Aşağı)"
+msgstr "Taste nach unten"
+
+msgid "Key Up (Tuş Yukarı)"
+msgstr "Taste nach oben"
+
+msgid "Wait"
+msgstr "Warten"
+
+msgid "Delay in milliseconds (ms):\n(Example: 1000 for 1 second)"
+msgstr "Verzögerung in Millisekunden (ms):\n(Beispiel: 1000 für 1 Sekunde)"
+
+msgid "Save Selected Key/Delay"
+msgstr "Ausgewählte Taste speichern"
+
+msgid "Event added."
+msgstr "Aktion hinzugefügt."
+
+msgid "Option 1: Auto Capture"
+msgstr "Option 1: Automatische Erfassung"
+
+msgid "Press to Capture"
+msgstr "Zum Erfassen drücken"
+
+msgid "Option 2: Select from List"
+msgstr "Option 2: Aus Liste auswählen"
+
+msgid "Selection cleared."
+msgstr "Auswahl aufgehoben."
+
+msgid "{count} events copied."
+msgstr "{count} Aktionen kopiert."
+
+msgid "{count} events pasted."
+msgstr "{count} Aktionen eingefügt."
+
+msgid "Letters (Harfler)"
+msgstr "Buchstaben"
+
+msgid "Punctuation (Yazım İşaretleri)"
+msgstr "Satzzeichen"
+
+msgid "Numbers (Sayılar)"
+msgstr "Zahlen"
+
+msgid "Function (F) Keys"
+msgstr "Funktionstasten"
+
+msgid "Navigation (Yön ve Gezinme)"
+msgstr "Navigationstasten"
+
+msgid "System & Edit (Sistem)"
+msgstr "Systemtasten"
