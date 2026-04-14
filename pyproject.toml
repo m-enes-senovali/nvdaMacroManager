@@ -9,7 +9,7 @@ description = "nvdaMacroManager"
 maintainers = [
 	{name = "Muhammet Enes Şenovalı", email = "mesenovali@gmail.com"},
 ]
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.10,<3.14"
 classifiers = [
 	"Development Status :: 5 - Production/Stable",
 	"Intended Audience :: End Users/Desktop",
@@ -18,7 +18,7 @@ classifiers = [
 	"Programming Language :: Python :: 3",
 	"Topic :: Accessibility",
 ]
-readme = "readme.md"
+readme = "README.md"
 license = {file = "COPYING.TXT"}
 dependencies = [
 	# Build add-on
