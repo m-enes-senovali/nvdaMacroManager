@@ -68,7 +68,10 @@ exclude = [
 	"addon/globalPlugins/nvda_macro_manager.py",
 	"msgfmt.py",
 ]
-
+ignore = [
+	"addon/globalPlugins/nvda_macro_manager.py",
+	"msgfmt.py",
+]
 [tool.ruff.format]
 indent-style = "tab"
 line-ending = "lf"
