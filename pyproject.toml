@@ -65,6 +65,8 @@ exclude = [
 	"__pycache__",
 	".venv",
 	"buildVars.py",
+	"addon/globalPlugins/nvda_macro_manager.py",
+	"msgfmt.py",
 ]
 
 [tool.ruff.format]
