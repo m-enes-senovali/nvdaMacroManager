@@ -85,7 +85,7 @@ def get_key_name(vk, scan, ext):
     if ext: lparam |= (1 << 24)
     buf = ctypes.create_unicode_buffer(64)
     if user32.GetKeyNameTextW(lparam, buf, 64):
-    return buf.value
+	    return buf.value
     return f"VK_{vk}"
 
 def apply_dark_theme(window):
