@@ -1,7 +1,7 @@
 # NVDAMacroManager (Modern Macro IDE & Automation Engine)
 
-**Developer:** Muhammet Enes Şenovalı  
-**Version:** 1.0.21  
+**Developer:** Muhammet Enes Şenovalı
+**Version:** 1.0.21
 
 NVDA Macro Manager is an accessibility-centric, low-level OS-based, high-performance macro recording, editing, and playback engine. It flawlessly automates your repetitive tasks, from complex gaming combos to daily office workflows, fully integrated into the NVDA screen reader.
 
