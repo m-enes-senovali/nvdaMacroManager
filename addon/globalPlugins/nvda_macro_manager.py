@@ -77,7 +77,8 @@ def get_foreground_app():
         if not hwnd: return None
         threadID, processID = winUser.getWindowThreadProcessID(hwnd)
         return appModuleHandler.getAppNameFromProcessID(processID)
-    except:
+    except Exception as e:
+        logHandler.log.debugWarning(f"Failed to get foreground app: {e}")
         return None
 
 def get_key_name(vk, scan, ext):
@@ -107,7 +108,23 @@ class MacroStorage:
         if os.path.exists(self.file_path):
             try:
                 with open(self.file_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                if not isinstance(data, list):
+                    raise ValueError("Macro data is not a list")
+                
+                valid_macros = []
+                for m in data:
+                    if not isinstance(m, dict): continue
+                    if "events" not in m or not isinstance(m["events"], list): continue
+                    
+                    valid_events = []
+                    for e in m["events"]:
+                        if not isinstance(e, dict): continue
+                        if "action" in e and "vkCode" in e:
+                            valid_events.append(e)
+                    m["events"] = valid_events
+                    valid_macros.append(m)
+                return valid_macros
             except Exception as e:
                 logHandler.log.error(f"NVDAMacroManager: Macro loading error: {e}")
         return []
@@ -351,38 +368,38 @@ class KeySelectDialog(wx.Dialog):
             letters_map[chr(vk)] = vk
             
         sym_map = {
-            ".": ". (Nokta)",
-            ",": ", (Virgül)",
-            "-": "- (Tire / Eksi)",
-            '"': '\" (Tırnak)',
-            "<": "< (Küçüktür)",
-            ">": "> (Büyüktür)",
-            ";": "; (Noktalı Virgül)",
-            ":": ": (İki Nokta)",
-            "'": "' (Tek Tırnak)",
-            "`": "` (Kesme / Vurgu)",
-            "~": "~ (Tilde)",
-            "=": "= (Eşittir)",
-            "+": "+ (Artı)",
-            "[": "[ (Sol Köşeli Parantez)",
-            "]": "] (Sağ Köşeli Parantez)",
-            "{": "{ (Sol Süslü Parantez)",
-            "}": "} (Sağ Süslü Parantez)",
-            "\\": "\\ (Ters Eğik Çizgi)",
-            "/": "/ (Eğik Çizgi)",
-            "|": "| (Düz Çizgi)",
-            "?": "? (Soru İşareti)",
-            "!": "! (Ünlem)",
-            "@": "@ (Bulunma / At)",
-            "#": "# (Kare)",
-            "$": "$ (Dolar)",
-            "%": "% (Yüzde)",
-            "^": "^ (Şapka)",
-            "&": "& (Ve)",
-            "*": "* (Yıldız / Çarpı)",
-            "(": "( (Sol Parantez)",
-            ")": ") (Sağ Parantez)",
-            "_": "_ (Alt Tire)"
+            ".": _(". (Nokta)"),
+            ",": _(", (Virgül)"),
+            "-": _("- (Tire / Eksi)"),
+            '"': _('\" (Tırnak)'),
+            "<": _("< (Küçüktür)"),
+            ">": _("> (Büyüktür)"),
+            ";": _("; (Noktalı Virgül)"),
+            ":": _(": (İki Nokta)"),
+            "'": _("' (Tek Tırnak)"),
+            "`": _("` (Kesme / Vurgu)"),
+            "~": _("~ (Tilde)"),
+            "=": _("= (Eşittir)"),
+            "+": _("+ (Artı)"),
+            "[": _("[ (Sol Köşeli Parantez)"),
+            "]": _("] (Sağ Köşeli Parantez)"),
+            "{": _("{ (Sol Süslü Parantez)"),
+            "}": _("} (Sağ Süslü Parantez)"),
+            "\\": _("\\ (Ters Eğik Çizgi)"),
+            "/": _("/ (Eğik Çizgi)"),
+            "|": _("| (Düz Çizgi)"),
+            "?": _("? (Soru İşareti)"),
+            "!": _("! (Ünlem)"),
+            "@": _("@ (Bulunma / At)"),
+            "#": _("# (Kare)"),
+            "$": _("$ (Dolar)"),
+            "%": _("% (Yüzde)"),
+            "^": _("^ (Şapka)"),
+            "&": _("& (Ve)"),
+            "*": _("* (Yıldız / Çarpı)"),
+            "(": _("( (Sol Parantez)"),
+            ")": _(") (Sağ Parantez)"),
+            "_": _("_ (Alt Tire)")
         }
         
         local_chars = []
