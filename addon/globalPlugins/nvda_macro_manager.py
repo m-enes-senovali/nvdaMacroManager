@@ -16,6 +16,9 @@ import appModuleHandler
 import addonHandler
 import copy
 import core 
+import base64
+import zlib
+import api
 
 addonHandler.initTranslation()
 
@@ -161,6 +164,33 @@ class MacroStorage:
             if self.update_scripts_callback: self.update_scripts_callback()
             return True
         return False
+
+    def export_macro_to_clipboard(self, index):
+        if 0 <= index < len(self.macros):
+            macro = self.macros[index]
+            json_str = json.dumps(macro, ensure_ascii=False)
+            compressed = zlib.compress(json_str.encode("utf-8"))
+            b64_str = base64.b64encode(compressed).decode("ascii")
+            clipboard_text = f"NVDAMacro::{b64_str}"
+            if api.copyToClip(clipboard_text):
+                return True
+        return False
+
+    def import_macro_from_clipboard(self):
+        try:
+            text = api.getClipData()
+            if not isinstance(text, str) or not text.startswith("NVDAMacro::"):
+                return False, _("No valid macro code found in clipboard.")
+            b64_str = text.split("::", 1)[1].strip()
+            compressed = base64.b64decode(b64_str)
+            json_str = zlib.decompress(compressed).decode("utf-8")
+            imported_data = json.loads(json_str)
+            if self.import_macro(imported_data):
+                return True, imported_data.get("name", "Unknown")
+            return False, _("Invalid macro format in clipboard.")
+        except Exception as e:
+            logHandler.log.error(f"NVDAMacroManager: Clipboard import error: {e}")
+            return False, _("Failed to decode macro from clipboard.")
 
     def _write_to_file(self):
         try:
@@ -1096,13 +1126,19 @@ class MacroManagerDialog(wx.Dialog):
         list_btn_sizer.Add(self.btn_delete, 0, wx.EXPAND)
         main_sizer.Add(list_btn_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
-        io_btn_sizer = wx.GridSizer(1, 2, 5, 5)
-        self.btn_import = wx.Button(self, label=_("Import"))
+        io_btn_sizer = wx.GridSizer(2, 2, 5, 5)
+        self.btn_import = wx.Button(self, label=_("Import File"))
         self.btn_import.Bind(wx.EVT_BUTTON, self.on_import_click)
         io_btn_sizer.Add(self.btn_import, 0, wx.EXPAND)
-        self.btn_export = wx.Button(self, label=_("Export"))
+        self.btn_export = wx.Button(self, label=_("Export File"))
         self.btn_export.Bind(wx.EVT_BUTTON, self.on_export_click)
         io_btn_sizer.Add(self.btn_export, 0, wx.EXPAND)
+        self.btn_import_clip = wx.Button(self, label=_("Import from Clipboard"))
+        self.btn_import_clip.Bind(wx.EVT_BUTTON, self.on_import_clip_click)
+        io_btn_sizer.Add(self.btn_import_clip, 0, wx.EXPAND)
+        self.btn_export_clip = wx.Button(self, label=_("Copy to Clipboard"))
+        self.btn_export_clip.Bind(wx.EVT_BUTTON, self.on_export_clip_click)
+        io_btn_sizer.Add(self.btn_export_clip, 0, wx.EXPAND)
         main_sizer.Add(io_btn_sizer, 0, wx.ALL | wx.EXPAND, 5)
         
         if self.events_buffer:
@@ -1226,6 +1262,25 @@ class MacroManagerDialog(wx.Dialog):
                 ui.message(_("Import failed."))
         self.macro_list.SetFocus()
 
+    def on_export_clip_click(self, event):
+        sels = self.macro_list.GetSelections()
+        if sels and self.storage.macros:
+            if self.storage.export_macro_to_clipboard(sels[0]):
+                ui.message(_("Macro '{name}' copied to clipboard.").format(name=self.storage.macros[sels[0]]['name']))
+            else:
+                ui.message(_("Failed to copy macro to clipboard."))
+        self.macro_list.SetFocus()
+
+    def on_import_clip_click(self, event):
+        success, msg = self.storage.import_macro_from_clipboard()
+        if success:
+            self.refresh_list()
+            ui.message(_("Imported macro: {name}").format(name=msg))
+            self.macro_list.SetSelection(len(self.storage.macros) - 1)
+        else:
+            ui.message(msg)
+        self.macro_list.SetFocus()
+
     def _parse_speed(self):
         try:
             val = float(self.speed_combo.GetValue().strip().split()[0].replace(',', '.'))
@@ -1246,10 +1301,10 @@ class MacroManagerDialog(wx.Dialog):
         self.macro_list.Clear()
         if not self.storage.macros:
             self.macro_list.Append(_("No macros yet"))
-            for btn in [self.btn_play, self.btn_edit, self.btn_delete, self.btn_export]: btn.Disable()
+            for btn in [self.btn_play, self.btn_edit, self.btn_delete, self.btn_export, self.btn_export_clip]: btn.Disable()
         else:
             for m in self.storage.macros: self.macro_list.Append(m["name"])
-            for btn in [self.btn_play, self.btn_edit, self.btn_delete, self.btn_export]: btn.Enable()
+            for btn in [self.btn_play, self.btn_edit, self.btn_delete, self.btn_export, self.btn_export_clip]: btn.Enable()
             self.macro_list.SetSelection(0)
             self.macro_list.SetFocus()
 
