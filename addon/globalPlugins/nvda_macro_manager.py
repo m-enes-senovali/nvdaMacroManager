@@ -255,14 +255,25 @@ class MacroEngine:
         return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
 
     def force_release_modifiers(self):
-        modifiers = [16, 17, 18, 20, 91, 92, 160, 161, 162, 163, 164, 165]
-        for m_vk in modifiers:
+        # 160: LSHIFT, 161: RSHIFT(ext), 162: LCTRL, 163: RCTRL(ext), 164: LALT, 165: RALT(ext)
+        # 91: LWIN(ext), 92: RWIN(ext), 20: CapsLock, 45: Insert(ext), 96: Numpad0
+        modifiers = {
+            160: False, 161: True,
+            162: False, 163: True,
+            164: False, 165: True,
+            91: True, 92: True,
+            20: False, 45: True, 96: False
+        }
+        for m_vk, extended in modifiers.items():
             if user32.GetAsyncKeyState(m_vk) & 0x8000:
                 inp = Input()
                 inp.type = INPUT_KEYBOARD
                 inp.ii.ki.wVk = m_vk
                 inp.ii.ki.wScan = 0
-                inp.ii.ki.dwFlags = KEYEVENTF_KEYUP
+                flags = KEYEVENTF_KEYUP
+                if extended:
+                    flags |= KEYEVENTF_EXTENDEDKEY
+                inp.ii.ki.dwFlags = flags
                 user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(Input))
 
     def play_macro(self, events_to_play, loop_count=1, speed=1.0, target_app=None):
