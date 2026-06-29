@@ -61,4 +61,3 @@ markdownExtensions: list[str] = []
 brailleTables: BrailleTables = {}
 symbolDictionaries: SymbolDictionaries = {}
 speechDictionaries: SpeechDictionaries = {}
-

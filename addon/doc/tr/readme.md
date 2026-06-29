@@ -1,7 +1,7 @@
 # NVDAMacroManager (Modern Makro IDE ve Otomasyon Motoru)
 
-**Geliştirici:** Muhammet Enes Şenovalı  
-**Sürüm:** 1.0.3  
+**Geliştirici:** Muhammet Enes Şenovalı
+**Sürüm:** 1.0.3
 
 NVDA Macro Manager, erişilebilirliği merkezine alan, işletim sistemi seviyesinde (low-level) çalışan, yüksek performanslı bir makro kayıt, düzenleme ve oynatma motorudur. Oyunlardaki karmaşık kombolardan günlük ofis işlerinize kadar tüm tekrarlayan görevlerinizi, NVDA ekran okuyucusuna tam entegre bir şekilde kusursuzca otomatikleştirir.
 
@@ -30,7 +30,7 @@ NVDA Macro Manager, erişilebilirliği merkezine alan, işletim sistemi seviyesi
 ## 🛠️ Nasıl Kullanılır?
 
 ### 1. Hızlı Makro Kaydetme
-* Yaptığınız işlemi anında ekranda görmek istiyorsanız `NVDA + Win + R` kullanın. 
+* Yaptığınız işlemi anında ekranda görmek istiyorsanız `NVDA + Win + R` kullanın.
 * Eğer klavyede tehlikeli tuşlara (`Delete`, `Alt+F4` vb.) basacaksanız ve bilgisayarınızın etkilenmesini istemiyorsanız `NVDA + Win + Shift + R` kullanın.
 * Kaydı bitirmek için aynı kısayola tekrar basın. Kaydedilen bu geçici makroyu `NVDA + Win + P` ile hemen test edebilirsiniz.
 
