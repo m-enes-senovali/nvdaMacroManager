@@ -874,8 +874,8 @@ class MacroEditDialog(wx.Dialog):
             return
 
         self.btn_del_event.Enable()
-        self.btn_move_up.Enable(not (0 in sels))
-        self.btn_move_down.Enable(not (len(self.linear_events) - 1 in sels))
+        self.btn_move_up.Enable(0 not in sels)
+        self.btn_move_down.Enable(len(self.linear_events) - 1 not in sels)
 
         has_delay = any(self.linear_events[s]["type"] == "delay" for s in sels)
         has_key = any(self.linear_events[s]["type"] != "delay" for s in sels)

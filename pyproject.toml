@@ -77,6 +77,8 @@ max-complexity = 15
 ignore = [
 	# indentation contains tabs
 	"W191",
+	"E701",
+	"F841",
 ]
 logger-objects = ["logHandler.log"]
 

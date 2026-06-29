@@ -5,9 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-06-29
 
 ### Added
+- **Clipboard Sharing:** Easily copy and import macros directly via the system clipboard using Base64/Zlib text representation, allowing effortless macro sharing with the community.
+- **AddonTemplate Migration:** Completely migrated the project to the official NVDA AddonTemplate.
 - **Macro Editor (IDE) UI Revolution:** Transitioned the macro editor entirely to a professional, linear step-by-step framework. Delays and keys are no longer grouped into single messy lines. Instead, every action (Wait, Key Down, Key Up, Press) is an independent line that can be moved, edited, copied, or deleted individually.
 - **Add Event Module:** Users can now dynamically inject new events (Wait delays or specific Key Strokes) at any point in an existing macro without needing to re-record.
 - **Copy, Cut, and Paste Support:** Implemented a dedicated clipboard for macro events. You can now use standard `Ctrl+C`, `Ctrl+X`, and `Ctrl+V` shortcuts in the list to flawlessly duplicate or move steps around the macro.
