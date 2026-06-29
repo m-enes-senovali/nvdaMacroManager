@@ -17,7 +17,7 @@ addon_info = AddonInfo(
 	addon_description=_("""A high-performance, OS-level macro recording, editing, and playback engine.
 Features include Stealth Mode recording, multi-event IDE, custom shortcuts, and dynamic speed multipliers."""),
 	# version
-	addon_version="1.2.0",
+	addon_version="1.2.3",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
 	addon_changelog=_("""Added Clipboard Sharing feature to copy/import macros as Base64/Zlib text.
