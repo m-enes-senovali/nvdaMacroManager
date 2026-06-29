@@ -281,32 +281,7 @@ msgstr "Tuş Yukarı"
 msgid "Press"
 msgstr "Tuşa Bas"
 
-msgid "Edit Key"
-msgstr "Tuşu Düzenle"
 
-msgid "Option 1: Auto Capture"
-msgstr "Seçenek 1: Tuşa Basarak Yakala"
-
-msgid "Press to Capture"
-msgstr "Tuşa Basarak Yakala"
-
-msgid "Option 2: Select from List"
-msgstr "Seçenek 2: Listeden Seç"
-
-msgid "Save Selected Key"
-msgstr "Seçili Tuşu Kaydet"
-
-msgid "Please select a valid key from the list."
-msgstr "Lütfen geçerli bir tuş seçin."
-
-msgid "Key Down"
-msgstr "Tuş Aşağı"
-
-msgid "Key Up"
-msgstr "Tuş Yukarı"
-
-msgid "Press"
-msgstr "Tuşa Bas"
 
 msgid "Add Event"
 msgstr "İşlem Ekle"
