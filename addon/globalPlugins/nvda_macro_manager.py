@@ -298,7 +298,7 @@ class MacroEngine:
 					"scanCode": e["scanCode"],
 					"extended": e["extended"],
 					"delay": 0.05,
-				}
+				},
 			)
 		return self.events, self.recorded_app
 
@@ -321,7 +321,7 @@ class MacroEngine:
 						"scanCode": lParam.contents.scanCode,
 						"extended": (lParam.contents.flags & 0x01) != 0,
 						"delay": delay,
-					}
+					},
 				)
 				self.last_time = current_time
 
@@ -389,9 +389,9 @@ class MacroEngine:
 					core.requestCorePump(
 						lambda: ui.message(
 							_(
-								"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'."
-							).format(target_app=target_app, current_app=current_app)
-						)
+								"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'.",
+							).format(target_app=target_app, current_app=current_app),
+						),
 					)
 					self.is_playing = False
 					return
@@ -461,7 +461,8 @@ class KeyCaptureDialog(wx.Dialog):
 
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		lbl = wx.StaticText(
-			self, label=_("Please press the new key on your keyboard...\n(It will be captured automatically)")
+			self,
+			label=_("Please press the new key on your keyboard...\n(It will be captured automatically)"),
 		)
 		lbl.Wrap(300)
 		sizer.Add(lbl, 1, wx.ALL | wx.ALIGN_CENTER, 20)
@@ -591,7 +592,7 @@ class KeySelectDialog(wx.Dialog):
 				(_("Numpad Subtract (Çıkar)"), 109),
 				(_("Numpad Decimal (Ondalık)"), 110),
 				(_("Numpad Divide (Böl)"), 111),
-			]
+			],
 		)
 
 		options.append((f"--- {_('Function (F) Keys')} ---", 0))
@@ -609,7 +610,7 @@ class KeySelectDialog(wx.Dialog):
 				(_("Page Down (Sayfa Aşağı)"), 34),
 				(_("Home (Baş)"), 36),
 				(_("End (Son)"), 35),
-			]
+			],
 		)
 
 		options.append((f"--- {_('System & Edit (Sistem)')} ---", 0))
@@ -632,13 +633,16 @@ class KeySelectDialog(wx.Dialog):
 				(_("Scroll Lock (Kaydırma Kilidi)"), 145),
 				(_("Pause (Duraklat)"), 19),
 				(_("Print Screen (Ekran Görüntüsü)"), 44),
-			]
+			],
 		)
 		return options
 
 	def __init__(self, parent):
 		super(KeySelectDialog, self).__init__(
-			parent, title=_("Edit Key"), size=(350, 250), style=wx.DEFAULT_DIALOG_STYLE
+			parent,
+			title=_("Edit Key"),
+			size=(350, 250),
+			style=wx.DEFAULT_DIALOG_STYLE,
 		)
 		self.captured_vk = None
 		self.captured_scan = 0
@@ -704,7 +708,10 @@ class KeySelectDialog(wx.Dialog):
 class AddEventDialog(wx.Dialog):
 	def __init__(self, parent):
 		super(AddEventDialog, self).__init__(
-			parent, title=_("Add Event"), size=(400, 350), style=wx.DEFAULT_DIALOG_STYLE
+			parent,
+			title=_("Add Event"),
+			size=(400, 350),
+			style=wx.DEFAULT_DIALOG_STYLE,
 		)
 		self.new_event = None
 		self.VK_OPTIONS = KeySelectDialog.get_dynamic_vk_mapping()
@@ -730,7 +737,8 @@ class AddEventDialog(wx.Dialog):
 		wait_sizer = wx.BoxSizer(wx.VERTICAL)
 		wait_sizer.Add(
 			wx.StaticText(
-				self.wait_panel, label=_("Delay in milliseconds (ms):\n(Example: 1000 for 1 second)")
+				self.wait_panel,
+				label=_("Delay in milliseconds (ms):\n(Example: 1000 for 1 second)"),
 			),
 			0,
 			wx.ALL,
@@ -845,7 +853,10 @@ class MacroEditDialog(wx.Dialog):
 		loop_box = wx.BoxSizer(wx.HORIZONTAL)
 		is_infinite = macro_data.get("loop_count", 1) == 0
 		self.loop_spin = wx.SpinCtrl(
-			self, value=str(macro_data.get("loop_count", 1) if not is_infinite else 1), min=1, max=999
+			self,
+			value=str(macro_data.get("loop_count", 1) if not is_infinite else 1),
+			min=1,
+			max=999,
 		)
 		self.loop_spin.SetName(_("Loop Count"))
 		self.loop_spin.Enable(not is_infinite)
@@ -867,7 +878,7 @@ class MacroEditDialog(wx.Dialog):
 		self.speed_combo = wx.ComboBox(self, choices=self.speed_choices, style=wx.CB_DROPDOWN)
 		self.speed_combo.SetValue(current_speed)
 		self.speed_combo.SetName(
-			_("Playback Speed. Choose a preset or type your own, like 1.3. 0 is instant.")
+			_("Playback Speed. Choose a preset or type your own, like 1.3. 0 is instant."),
 		)
 		grid_sizer.Add(self.speed_combo, 1, wx.EXPAND)
 
@@ -875,7 +886,8 @@ class MacroEditDialog(wx.Dialog):
 		self.rec_app = macro_data.get("recorded_app", macro_data.get("target_app"))
 		if self.rec_app:
 			self.app_checkbox = wx.CheckBox(
-				self, label=_("Run only in '{app_name}' application").format(app_name=self.rec_app)
+				self,
+				label=_("Run only in '{app_name}' application").format(app_name=self.rec_app),
 			)
 		else:
 			self.app_checkbox = wx.CheckBox(self, label=_("Lock to current active application"))
@@ -889,7 +901,7 @@ class MacroEditDialog(wx.Dialog):
 		main_sizer.Add(self.events_label, 0, wx.LEFT | wx.RIGHT, 10)
 		self.events_list = wx.ListBox(self, choices=self._build_event_strings(), style=wx.LB_EXTENDED)
 		self.events_list.SetName(
-			_("Macro Events List. You can use Shift and arrow keys for multiple selection.")
+			_("Macro Events List. You can use Shift and arrow keys for multiple selection."),
 		)
 		self.events_list.Bind(wx.EVT_LISTBOX, self.on_list_select)
 		main_sizer.Add(self.events_list, 1, wx.ALL | wx.EXPAND, 10)
@@ -959,7 +971,7 @@ class MacroEditDialog(wx.Dialog):
 				(wx.ACCEL_CTRL, ord("C"), copy_id),
 				(wx.ACCEL_CTRL, ord("X"), cut_id),
 				(wx.ACCEL_CTRL, ord("V"), paste_id),
-			]
+			],
 		)
 		self.SetAcceleratorTable(accel_tbl)
 		wx.CallAfter(self.on_list_select, None)
@@ -1055,7 +1067,7 @@ class MacroEditDialog(wx.Dialog):
 							"vkCode": e1["vkCode"],
 							"scanCode": e1["scanCode"],
 							"extended": e1.get("extended", False),
-						}
+						},
 					)
 					i += 2
 					continue
@@ -1065,7 +1077,7 @@ class MacroEditDialog(wx.Dialog):
 					"vkCode": e1["vkCode"],
 					"scanCode": e1["scanCode"],
 					"extended": e1.get("extended", False),
-				}
+				},
 			)
 			i += 1
 		return linear
@@ -1084,7 +1096,7 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					}
+					},
 				)
 				current_delay = 0.035
 				rebuilt.append(
@@ -1094,7 +1106,7 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					}
+					},
 				)
 				current_delay = 0.0
 			else:
@@ -1105,7 +1117,7 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					}
+					},
 				)
 				current_delay = 0.0
 		return rebuilt
@@ -1349,7 +1361,7 @@ class MacroManagerDialog(wx.Dialog):
 				wx.StaticText(
 					self,
 					label=_("New Macro Process ({count} Events Captured):").format(
-						count=len(self.events_buffer)
+						count=len(self.events_buffer),
 					),
 				),
 				0,
@@ -1380,7 +1392,7 @@ class MacroManagerDialog(wx.Dialog):
 			self.speed_combo = wx.ComboBox(self, choices=self.speed_choices, style=wx.CB_DROPDOWN)
 			self.speed_combo.SetValue("1.0")
 			self.speed_combo.SetName(
-				_("Playback Speed. Choose a preset or type your own, like 1.3. 0 is instant.")
+				_("Playback Speed. Choose a preset or type your own, like 1.3. 0 is instant."),
 			)
 			grid_sizer.Add(self.speed_combo, 1, wx.EXPAND)
 			grid_sizer.Add(wx.StaticText(self, label=_("Security:")), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -1513,7 +1525,9 @@ class MacroManagerDialog(wx.Dialog):
 		if sels and self.storage.macros:
 			if self.storage.export_macro_to_clipboard(sels[0]):
 				ui.message(
-					_("Macro '{name}' copied to clipboard.").format(name=self.storage.macros[sels[0]]["name"])
+					_("Macro '{name}' copied to clipboard.").format(
+						name=self.storage.macros[sels[0]]["name"],
+					),
 				)
 			else:
 				ui.message(_("Failed to copy macro to clipboard."))
@@ -1649,7 +1663,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _stop_recording_and_notify(self):
 		self.last_recorded_events, self.last_recorded_app = self.engine.stop_recording()
 		ui.message(
-			_("Recording stopped. {count} events captured.").format(count=len(self.last_recorded_events))
+			_("Recording stopped. {count} events captured.").format(count=len(self.last_recorded_events)),
 		)
 
 	@scriptHandler.script(
