@@ -17,9 +17,9 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@v10.0.1
       with:
         enable-cache: true
     - name: Install dependencies
@@ -29,7 +29,7 @@ jobs:
         uv sync
 
     - name: Code checks
-      run: export SKIP=no-commit-to-branch,pyright; uv run pre-commit run --all-files
+      run: export SKIP=no-commit-to-branch; uv run pre-commit run --all-files
 
     - name: building addon
       run: uv run scons && uv run scons pot
@@ -55,7 +55,7 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: download all artifacts
       uses: actions/download-artifact@v8
       with:
@@ -63,10 +63,23 @@ jobs:
         merge-multiple: true
     - name: Display structure of downloaded files
       run: ls -R
-    - name: Calculate sha256
+    - name: Prepare release notes and SHA256
+
       run: |
-        echo -e "\nSHA256: " >> changelog.md
-        sha256sum *.nvda-addon >> changelog.md
+        version="${GITHUB_REF_NAME#v}"
+        grep -Fq "## [$version]" CHANGELOG.md
+        awk -v header="## [$version]" '
+          index($0, header) == 1 { capture = 1; next }
+          capture && /^## \[/ { exit }
+          capture { print }
+        ' CHANGELOG.md > release-notes.md
+        {
+          echo
+          echo "### SHA-256"
+          echo '```text'
+          sha256sum *.nvda-addon
+          echo '```'
+        } >> release-notes.md
 
     - name: Release
       uses: softprops/action-gh-release@v3
@@ -74,6 +87,6 @@ jobs:
         files: |
           *.nvda-addon
           *.pot
-        body_path: changelog.md
+        body_path: release-notes.md
         fail_on_unmatched_files: true
         prerelease: ${{ contains(github.ref, '-') }}

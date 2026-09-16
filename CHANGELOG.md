@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-09-17
+
+### Added
+- Local regression tests for recording hooks, safe-mode suppression, playback cleanup, application locks, macro validation, atomic persistence, bounded clipboard imports, and edited key hold durations.
+- Explicit cleanup when NVDA disables or reloads the add-on.
+- Complete German, Spanish, Turkish, and Portuguese (Portugal) interface catalogs, with localized documentation for every non-English language.
+- Per-macro start delay with preset and custom decimal values; it runs once before the first event and remains independent of playback speed.
+
+### Changed
+- Safe recording now suppresses all captured physical keyboard events while preserving its dedicated stop gesture.
+- Application-locked macros now fail closed when the foreground application cannot be identified and stop when focus changes.
+- Application locks selected in the macro editor now preserve their target across saves, including legacy or imported macros without a recorded-application field.
+- Dynamic NVDA shortcuts now resolve the current stored macro by ID at execution time, so loop-count, speed, event, and application-lock edits also take effect for shared/imported macros and cached shortcuts.
+- Macro files and clipboard imports are normalized and size-bounded before use.
+- Macro database updates use same-directory temporary files, backups, and atomic replacement.
+- The event editor preserves the recorded key hold duration when converting between raw and linear events.
+- Package metadata, user documentation, CI actions, Ruff, and Pyright checks were aligned with the project and version 1.2.4.
+
+### Fixed
+- Replaced the nonexistent NVDA core pump request with main-thread callbacks.
+- Corrected 64-bit Windows hook and `SendInput` ctypes signatures and now report hook installation failures.
+- Removed playback start races and ensured only keys injected by the active playback are released on cancellation or failure; physical Ctrl, Shift, Alt, Win, and NVDA shortcut modifiers are no longer released synthetically.
+- Prevented stale or invalid macro IDs from creating invalid dynamic NVDA script names.
+- Storage failures no longer produce false success announcements in the manager.
+- Removed forced dark control colors so NVDA users keep native Windows and high-contrast theme behavior.
+
+## [1.2.3] - 2026-06-30
+
+### Fixed
+- Packaging and store-submission metadata corrections following the AddonTemplate migration.
+
 ## [1.2.0] - 2026-06-29
 
 ### Added

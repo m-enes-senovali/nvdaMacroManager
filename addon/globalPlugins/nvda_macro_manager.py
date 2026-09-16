@@ -1,26 +1,35 @@
-import globalPluginHandler
-import scriptHandler
-import ui
-import logHandler
-import wx
-import gui
-import time
+import base64
+import builtins
+import copy
 import ctypes
 from ctypes import wintypes
-import threading
-import os
 import json
-import globalVars
-import winUser
-import appModuleHandler
-import addonHandler
-import copy
-import core
-import base64
+import math
+import os
+import re
+import shutil
+import tempfile
+import threading
+import time
+from typing import Any, Callable
+import uuid
 import zlib
+
+import addonHandler
 import api
+import appModuleHandler
+import core
+import globalPluginHandler
+import globalVars
+import gui
+import logHandler
+import scriptHandler
+import ui
+import winUser
+import wx
 
 addonHandler.initTranslation()
+_: Callable[[str], str] = getattr(builtins, "_")
 
 WH_KEYBOARD_LL = 13
 WM_KEYDOWN = 0x0100
@@ -30,8 +39,21 @@ WM_SYSKEYUP = 0x0105
 INPUT_KEYBOARD = 1
 KEYEVENTF_EXTENDEDKEY = 0x0001
 KEYEVENTF_KEYUP = 0x0002
+LLKHF_EXTENDED = 0x01
+LLKHF_INJECTED = 0x10
+VK_R = 0x52
+NVDA_MODIFIER_KEYS = frozenset({20, 45, 96})
+MAX_MACRO_EVENTS = 100_000
+MAX_MACRO_NAME_LENGTH = 200
+MAX_APP_NAME_LENGTH = 260
+MAX_EVENT_DELAY_SECONDS = 3_600.0
+MAX_START_DELAY_SECONDS = 3_600.0
+MAX_PLAYBACK_SPEED = 100.0
+MAX_LOOP_COUNT = 999
+MAX_CLIPBOARD_TEXT_BYTES = 2 * 1024 * 1024
+MAX_DECOMPRESSED_MACRO_BYTES = 10 * 1024 * 1024
 
-user32 = ctypes.windll.user32
+user32 = ctypes.WinDLL("user32", use_last_error=True)
 
 
 class KBDLLHOOKSTRUCT(ctypes.Structure):
@@ -40,12 +62,13 @@ class KBDLLHOOKSTRUCT(ctypes.Structure):
 		("scanCode", wintypes.DWORD),
 		("flags", wintypes.DWORD),
 		("time", wintypes.DWORD),
-		("dwExtraInfo", ctypes.POINTER(wintypes.ULONG)),
+		("dwExtraInfo", ctypes.c_size_t),
 	]
 
 
-HOOKPROC = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_int, wintypes.WPARAM, ctypes.POINTER(KBDLLHOOKSTRUCT))
-PUL = ctypes.POINTER(ctypes.c_ulong)
+HHOOK = wintypes.HANDLE
+LRESULT = wintypes.LPARAM
+HOOKPROC = ctypes.WINFUNCTYPE(LRESULT, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
 
 
 class KeyBdInput(ctypes.Structure):
@@ -54,7 +77,7 @@ class KeyBdInput(ctypes.Structure):
 		("wScan", ctypes.c_ushort),
 		("dwFlags", ctypes.c_ulong),
 		("time", ctypes.c_ulong),
-		("dwExtraInfo", PUL),
+		("dwExtraInfo", ctypes.c_size_t),
 	]
 
 
@@ -73,7 +96,7 @@ class MouseInput(ctypes.Structure):
 		("mouseData", ctypes.c_ulong),
 		("dwFlags", ctypes.c_ulong),
 		("time", ctypes.c_ulong),
-		("dwExtraInfo", PUL),
+		("dwExtraInfo", ctypes.c_size_t),
 	]
 
 
@@ -90,6 +113,16 @@ class Input(ctypes.Structure):
 		("type", ctypes.c_ulong),
 		("ii", Input_I),
 	]
+
+
+user32.SetWindowsHookExW.argtypes = (ctypes.c_int, HOOKPROC, wintypes.HINSTANCE, wintypes.DWORD)
+user32.SetWindowsHookExW.restype = HHOOK
+user32.UnhookWindowsHookEx.argtypes = (HHOOK,)
+user32.UnhookWindowsHookEx.restype = wintypes.BOOL
+user32.CallNextHookEx.argtypes = (HHOOK, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
+user32.CallNextHookEx.restype = LRESULT
+user32.SendInput.argtypes = (wintypes.UINT, ctypes.POINTER(Input), ctypes.c_int)
+user32.SendInput.restype = wintypes.UINT
 
 
 def get_foreground_app():
@@ -114,130 +147,304 @@ def get_key_name(vk, scan, ext):
 	return f"VK_{vk}"
 
 
-def apply_dark_theme(window):
-	bg_color = wx.Colour(40, 40, 40)
-	fg_color = wx.Colour(220, 220, 220)
-	window.SetBackgroundColour(bg_color)
-	window.SetForegroundColour(fg_color)
-	for child in window.GetChildren():
-		if not isinstance(child, (wx.CheckBox, wx.Button, wx.SpinCtrl)):
-			child.SetBackgroundColour(bg_color)
-			child.SetForegroundColour(fg_color)
+class MacroValidationError(ValueError):
+	pass
+
+
+class MacroStorageError(OSError):
+	pass
+
+
+def get_preferred_lock_app(macro_data):
+	return macro_data.get("target_app") or macro_data.get("recorded_app")
+
+
+def resolve_target_application(lock_enabled, preferred_app=None):
+	if not lock_enabled:
+		return None
+	if preferred_app:
+		return preferred_app
+	current_app = get_foreground_app()
+	if not current_app or current_app.casefold() == "nvda":
+		raise MacroValidationError(
+			_(
+				"Cannot enable the application lock because no target application is available. "
+				"Record the macro in the target application and try again.",
+			),
+		)
+	return current_app
 
 
 class MacroStorage:
 	def __init__(self, update_scripts_callback=None):
 		self.file_path = os.path.join(globalVars.appArgs.configPath, "nvda_macros.json")
+		self.backup_path = f"{self.file_path}.bak"
 		self.update_scripts_callback = update_scripts_callback
+		self._database_needs_repair = False
 		self.macros = self.load_macros()
-
-	def load_macros(self):
-		if os.path.exists(self.file_path):
+		if self._database_needs_repair:
 			try:
-				with open(self.file_path, "r", encoding="utf-8") as f:
-					data = json.load(f)
-				if not isinstance(data, list):
-					raise ValueError("Macro data is not a list")
+				self._write_to_file()
+			except MacroStorageError:
+				logHandler.log.error("NVDAMacroManager: Could not persist repaired macro data")
 
-				valid_macros = []
-				for m in data:
-					if not isinstance(m, dict):
-						continue
-					if "events" not in m or not isinstance(m["events"], list):
-						continue
+	@staticmethod
+	def _normalize_optional_app(value: Any, field_name: str) -> str | None:
+		if value is None or value == "":
+			return None
+		if not isinstance(value, str) or len(value) > MAX_APP_NAME_LENGTH:
+			raise MacroValidationError(f"{field_name} must be a short string or null")
+		return value
 
-					valid_events = []
-					for e in m["events"]:
-						if not isinstance(e, dict):
-							continue
-						if "action" in e and "vkCode" in e:
-							valid_events.append(e)
-					m["events"] = valid_events
-					valid_macros.append(m)
-				return valid_macros
-			except Exception as e:
-				logHandler.log.error(f"NVDAMacroManager: Macro loading error: {e}")
-		return []
+	@staticmethod
+	def _normalize_event(event: Any) -> dict[str, Any]:
+		if not isinstance(event, dict):
+			raise MacroValidationError("Each macro event must be an object")
+		action = event.get("action")
+		if action not in {"keyDown", "keyUp"}:
+			raise MacroValidationError("Event action must be keyDown or keyUp")
+		vk_code = event.get("vkCode")
+		scan_code = event.get("scanCode", 0)
+		delay = event.get("delay", 0.0)
+		if isinstance(vk_code, bool) or not isinstance(vk_code, int) or not 1 <= vk_code <= 0xFF:
+			raise MacroValidationError("Event vkCode must be an integer from 1 to 255")
+		if isinstance(scan_code, bool) or not isinstance(scan_code, int) or not 0 <= scan_code <= 0xFFFF:
+			raise MacroValidationError("Event scanCode must be an integer from 0 to 65535")
+		if isinstance(delay, bool) or not isinstance(delay, (int, float)):
+			raise MacroValidationError("Event delay must be numeric")
+		delay = float(delay)
+		if not math.isfinite(delay) or not 0 <= delay <= MAX_EVENT_DELAY_SECONDS:
+			raise MacroValidationError("Event delay is outside the supported range")
+		return {
+			"action": action,
+			"vkCode": vk_code,
+			"scanCode": scan_code,
+			"extended": bool(event.get("extended", False)),
+			"delay": delay,
+		}
 
-	def save_macro(self, name, loop_count, speed, target_app, recorded_app, events):
-		new_macro = {
-			"id": str(time.time()),
-			"name": name,
+	@classmethod
+	def normalize_macro(cls, macro: Any, *, new_id: bool = False) -> dict[str, Any]:
+		if not isinstance(macro, dict):
+			raise MacroValidationError("Macro must be an object")
+		name = macro.get("name")
+		if not isinstance(name, str) or not name.strip() or len(name.strip()) > MAX_MACRO_NAME_LENGTH:
+			raise MacroValidationError("Macro name is missing or too long")
+		events = macro.get("events")
+		if not isinstance(events, list) or len(events) > MAX_MACRO_EVENTS:
+			raise MacroValidationError("Macro events must be a bounded list")
+		loop_count = macro.get("loop_count", 1)
+		if (
+			isinstance(loop_count, bool)
+			or not isinstance(loop_count, int)
+			or not 0 <= loop_count <= MAX_LOOP_COUNT
+		):
+			raise MacroValidationError("Loop count is outside the supported range")
+		speed = macro.get("speed", 1.0)
+		if isinstance(speed, bool) or not isinstance(speed, (int, float)):
+			raise MacroValidationError("Playback speed must be numeric")
+		speed = float(speed)
+		if not math.isfinite(speed) or not 0 <= speed <= MAX_PLAYBACK_SPEED:
+			raise MacroValidationError("Playback speed is outside the supported range")
+		start_delay = macro.get("start_delay", 0.0)
+		if isinstance(start_delay, bool) or not isinstance(start_delay, (int, float)):
+			raise MacroValidationError("Start delay must be numeric")
+		start_delay = float(start_delay)
+		if not math.isfinite(start_delay) or not 0 <= start_delay <= MAX_START_DELAY_SECONDS:
+			raise MacroValidationError("Start delay is outside the supported range")
+		macro_id = macro.get("id")
+		if new_id or not isinstance(macro_id, str) or not macro_id.strip() or len(macro_id) > 100:
+			macro_id = uuid.uuid4().hex
+		return {
+			"id": macro_id,
+			"name": name.strip(),
 			"loop_count": loop_count,
 			"speed": speed,
-			"target_app": target_app,
-			"recorded_app": recorded_app,
-			"events": events,
+			"start_delay": start_delay,
+			"target_app": cls._normalize_optional_app(macro.get("target_app"), "target_app"),
+			"recorded_app": cls._normalize_optional_app(macro.get("recorded_app"), "recorded_app"),
+			"events": [cls._normalize_event(event) for event in events],
 		}
-		self.macros.append(new_macro)
-		self._write_to_file()
+
+	def load_macros(self):
+		if not os.path.exists(self.file_path):
+			return []
+		try:
+			if os.path.getsize(self.file_path) > MAX_DECOMPRESSED_MACRO_BYTES:
+				raise MacroValidationError("Macro database is too large")
+			with open(self.file_path, "r", encoding="utf-8") as f:
+				data = json.load(f)
+			if not isinstance(data, list):
+				raise MacroValidationError("Macro data is not a list")
+			valid_macros = []
+			seen_ids = set()
+			for index, macro in enumerate(data):
+				try:
+					normalized = self.normalize_macro(macro)
+					if normalized["id"] in seen_ids:
+						normalized["id"] = uuid.uuid4().hex
+					if normalized != macro:
+						self._database_needs_repair = True
+					seen_ids.add(normalized["id"])
+					valid_macros.append(normalized)
+				except MacroValidationError as error:
+					self._database_needs_repair = True
+					logHandler.log.error(
+						f"NVDAMacroManager: Ignoring invalid macro at index {index}: {error}"
+					)
+			return valid_macros
+		except Exception as error:
+			logHandler.log.error(f"NVDAMacroManager: Macro loading error: {error}")
+		return []
+
+	def _notify_scripts_changed(self):
 		if self.update_scripts_callback:
 			self.update_scripts_callback()
 
-	def update_macro(self, index, updated_data):
-		if 0 <= index < len(self.macros):
-			self.macros[index].update(updated_data)
+	def save_macro(self, name, loop_count, speed, target_app, recorded_app, events, start_delay=0.0):
+		new_macro = self.normalize_macro(
+			{
+				"name": name,
+				"loop_count": loop_count,
+				"speed": speed,
+				"start_delay": start_delay,
+				"target_app": target_app,
+				"recorded_app": recorded_app,
+				"events": events,
+			},
+			new_id=True,
+		)
+		self.macros.append(new_macro)
+		try:
 			self._write_to_file()
-			if self.update_scripts_callback:
-				self.update_scripts_callback()
+		except Exception:
+			self.macros.pop()
+			raise
+		self._notify_scripts_changed()
+		return new_macro
+
+	def update_macro(self, index, updated_data):
+		if not 0 <= index < len(self.macros):
+			return False
+		old_macro = self.macros[index]
+		candidate = copy.deepcopy(old_macro)
+		candidate.update(updated_data)
+		candidate["id"] = old_macro["id"]
+		self.macros[index] = self.normalize_macro(candidate)
+		try:
+			self._write_to_file()
+		except Exception:
+			self.macros[index] = old_macro
+			raise
+		self._notify_scripts_changed()
+		return True
 
 	def delete_macro(self, index):
-		if 0 <= index < len(self.macros):
-			deleted_name = self.macros[index]["name"]
-			self.macros.pop(index)
+		if not 0 <= index < len(self.macros):
+			return None
+		deleted_macro = self.macros.pop(index)
+		try:
 			self._write_to_file()
-			if self.update_scripts_callback:
-				self.update_scripts_callback()
-			return deleted_name
-		return None
+		except Exception:
+			self.macros.insert(index, deleted_macro)
+			raise
+		self._notify_scripts_changed()
+		return deleted_macro["name"]
+
+	def delete_macros(self, indices):
+		valid_indices = sorted({index for index in indices if 0 <= index < len(self.macros)}, reverse=True)
+		if not valid_indices:
+			return []
+		old_macros = self.macros[:]
+		deleted_names = [self.macros[index]["name"] for index in valid_indices]
+		for index in valid_indices:
+			self.macros.pop(index)
+		try:
+			self._write_to_file()
+		except Exception:
+			self.macros = old_macros
+			raise
+		self._notify_scripts_changed()
+		return deleted_names
 
 	def import_macro(self, imported_data):
-		if "name" in imported_data and "events" in imported_data:
-			imported_data["id"] = str(time.time())
-			self.macros.append(imported_data)
+		macro = self.normalize_macro(imported_data, new_id=True)
+		self.macros.append(macro)
+		try:
 			self._write_to_file()
-			if self.update_scripts_callback:
-				self.update_scripts_callback()
-			return True
-		return False
+		except Exception:
+			self.macros.pop()
+			raise
+		self._notify_scripts_changed()
+		return macro
 
 	def export_macro_to_clipboard(self, index):
-		if 0 <= index < len(self.macros):
-			macro = self.macros[index]
-			json_str = json.dumps(macro, ensure_ascii=False)
-			compressed = zlib.compress(json_str.encode("utf-8"))
-			b64_str = base64.b64encode(compressed).decode("ascii")
-			clipboard_text = f"NVDAMacro::{b64_str}"
-			if api.copyToClip(clipboard_text):
-				return True
-		return False
+		if not 0 <= index < len(self.macros):
+			return False
+		macro = self.macros[index]
+		json_str = json.dumps(macro, ensure_ascii=False)
+		compressed = zlib.compress(json_str.encode("utf-8"))
+		b64_str = base64.b64encode(compressed).decode("ascii")
+		return bool(api.copyToClip(f"NVDAMacro::{b64_str}"))
 
 	def import_macro_from_clipboard(self):
 		try:
 			text = api.getClipData()
 			if not isinstance(text, str) or not text.startswith("NVDAMacro::"):
 				return False, _("No valid macro code found in clipboard.")
+			if len(text.encode("utf-8")) > MAX_CLIPBOARD_TEXT_BYTES:
+				raise MacroValidationError("Clipboard macro is too large")
 			b64_str = text.split("::", 1)[1].strip()
-			compressed = base64.b64decode(b64_str)
-			json_str = zlib.decompress(compressed).decode("utf-8")
-			imported_data = json.loads(json_str)
-			if self.import_macro(imported_data):
-				return True, imported_data.get("name", "Unknown")
+			compressed = base64.b64decode(b64_str, validate=True)
+			decompressor = zlib.decompressobj()
+			payload = decompressor.decompress(compressed, MAX_DECOMPRESSED_MACRO_BYTES + 1)
+			if decompressor.unconsumed_tail or len(payload) > MAX_DECOMPRESSED_MACRO_BYTES:
+				raise MacroValidationError("Decompressed macro is too large")
+			payload += decompressor.flush()
+			if not decompressor.eof or len(payload) > MAX_DECOMPRESSED_MACRO_BYTES:
+				raise MacroValidationError("Compressed macro data is incomplete or too large")
+			imported_data = json.loads(payload.decode("utf-8"))
+			macro = self.import_macro(imported_data)
+			return True, macro["name"]
+		except (MacroValidationError, ValueError, TypeError, json.JSONDecodeError, zlib.error) as error:
+			logHandler.log.error(f"NVDAMacroManager: Clipboard import rejected: {error}")
 			return False, _("Invalid macro format in clipboard.")
-		except Exception as e:
-			logHandler.log.error(f"NVDAMacroManager: Clipboard import error: {e}")
+		except Exception as error:
+			logHandler.log.error(f"NVDAMacroManager: Clipboard import error: {error}")
 			return False, _("Failed to decode macro from clipboard.")
 
 	def _write_to_file(self):
+		config_dir = os.path.dirname(self.file_path)
+		os.makedirs(config_dir, exist_ok=True)
+		temp_path = None
 		try:
-			with open(self.file_path, "w", encoding="utf-8") as f:
-				json.dump(self.macros, f, ensure_ascii=False, indent=4)
-		except Exception as e:
-			logHandler.log.error(f"NVDAMacroManager: Macro saving error: {e}")
+			with tempfile.NamedTemporaryFile(
+				"w",
+				encoding="utf-8",
+				dir=config_dir,
+				prefix="nvda_macros_",
+				suffix=".tmp",
+				delete=False,
+			) as temp_file:
+				temp_path = temp_file.name
+				json.dump(self.macros, temp_file, ensure_ascii=False, indent=4)
+				temp_file.flush()
+				os.fsync(temp_file.fileno())
+			if os.path.exists(self.file_path):
+				shutil.copy2(self.file_path, self.backup_path)
+			os.replace(temp_path, self.file_path)
+		except Exception as error:
+			if temp_path and os.path.exists(temp_path):
+				try:
+					os.unlink(temp_path)
+				except OSError:
+					pass
+			logHandler.log.error(f"NVDAMacroManager: Macro saving error: {error}")
+			raise MacroStorageError(str(error)) from error
 
 
 class MacroEngine:
-	def __init__(self):
+	def __init__(self, safe_stop_callback=None):
 		self.is_recording = False
 		self.is_playing = False
 		self.safe_mode = False
@@ -247,20 +454,46 @@ class MacroEngine:
 		self._hook_proc = HOOKPROC(self.low_level_keyboard_handler)
 		self.recorded_app = None
 		self.stop_playback_event = threading.Event()
+		self._safe_stop_callback = safe_stop_callback
+		self._safe_stop_requested = False
+		self._playback_thread = None
+		self._state_lock = threading.RLock()
 
 	def start_recording(self, safe_mode=False):
-		self.events = []
-		self.is_recording = True
-		self.safe_mode = safe_mode
-		self.last_time = time.perf_counter()
-		self.hook_id = user32.SetWindowsHookExW(WH_KEYBOARD_LL, self._hook_proc, None, 0)
+		with self._state_lock:
+			if self.is_recording or self.is_playing:
+				return False
+			try:
+				hook_id = user32.SetWindowsHookExW(WH_KEYBOARD_LL, self._hook_proc, None, 0)
+			except OSError as error:
+				logHandler.log.error(f"NVDAMacroManager: Failed to install the keyboard hook: {error}")
+				return False
+			if not hook_id:
+				logHandler.log.error("NVDAMacroManager: Failed to install the low-level keyboard hook")
+				return False
+			self.events = []
+			self.is_recording = True
+			self.safe_mode = bool(safe_mode)
+			self.last_time = time.perf_counter()
+			self.hook_id = hook_id
+			self.recorded_app = get_foreground_app()
+			self._safe_stop_requested = False
+		return True
 
 	def stop_recording(self):
-		self.is_recording = False
-		if self.hook_id:
-			user32.UnhookWindowsHookEx(self.hook_id)
+		with self._state_lock:
+			self.is_recording = False
+			hook_id = self.hook_id
 			self.hook_id = None
-		self.recorded_app = get_foreground_app()
+			self._safe_stop_requested = False
+		if hook_id:
+			try:
+				if not user32.UnhookWindowsHookEx(hook_id):
+					logHandler.log.error("NVDAMacroManager: Failed to remove the low-level keyboard hook")
+			except OSError as error:
+				logHandler.log.error(f"NVDAMacroManager: Failed to remove the keyboard hook: {error}")
+		if self.recorded_app is None:
+			self.recorded_app = get_foreground_app()
 
 		while self.events and self.events[0]["action"] == "keyUp":
 			self.events.pop(0)
@@ -285,166 +518,236 @@ class MacroEngine:
 
 		pressed_keys = {}
 		for e in self.events:
+			key_id = (e["vkCode"], e["scanCode"], e.get("extended", False))
 			if e["action"] == "keyDown":
-				pressed_keys[e["vkCode"]] = e
-			elif e["action"] == "keyUp" and e["vkCode"] in pressed_keys:
-				del pressed_keys[e["vkCode"]]
+				pressed_keys[key_id] = e
+			elif e["action"] == "keyUp":
+				pressed_keys.pop(key_id, None)
 
-		for vk, e in pressed_keys.items():
+		for e in pressed_keys.values():
 			self.events.append(
 				{
 					"action": "keyUp",
-					"vkCode": vk,
+					"vkCode": e["vkCode"],
 					"scanCode": e["scanCode"],
 					"extended": e["extended"],
 					"delay": 0.05,
 				},
 			)
-		return self.events, self.recorded_app
+		return copy.deepcopy(self.events), self.recorded_app
 
 	def low_level_keyboard_handler(self, nCode, wParam, lParam):
+		try:
+			return self._low_level_keyboard_handler_impl(nCode, wParam, lParam)
+		except Exception as error:
+			logHandler.log.error(f"NVDAMacroManager: Keyboard hook error: {error}")
+			return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
+
+	def _low_level_keyboard_handler_impl(self, nCode, wParam, lParam):
 		if nCode >= 0 and self.is_recording:
-			injected = (lParam.contents.flags & 0x10) != 0
+			keyboard_data = ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
+			injected = bool(keyboard_data.flags & LLKHF_INJECTED)
 			if not injected:
+				if wParam not in (WM_KEYDOWN, WM_SYSKEYDOWN, WM_KEYUP, WM_SYSKEYUP):
+					return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
 				current_time = time.perf_counter()
 				delay = current_time - self.last_time
-				action = "unknown"
-				if wParam in (WM_KEYDOWN, WM_SYSKEYDOWN):
-					action = "keyDown"
-				elif wParam in (WM_KEYUP, WM_SYSKEYUP):
-					action = "keyUp"
-				vk = lParam.contents.vkCode
+				action = "keyDown" if wParam in (WM_KEYDOWN, WM_SYSKEYDOWN) else "keyUp"
+				vk = keyboard_data.vkCode
 				self.events.append(
 					{
 						"action": action,
 						"vkCode": vk,
-						"scanCode": lParam.contents.scanCode,
-						"extended": (lParam.contents.flags & 0x01) != 0,
+						"scanCode": keyboard_data.scanCode,
+						"extended": bool(keyboard_data.flags & LLKHF_EXTENDED),
 						"delay": delay,
 					},
 				)
 				self.last_time = current_time
 
 				if self.safe_mode:
-					nvda_down = any(user32.GetAsyncKeyState(k) & 0x8000 for k in (45, 96, 20))
-					shift_down = 1 if (user32.GetAsyncKeyState(16) & 0x8000) else 0
-					ctrl_down = 1 if (user32.GetAsyncKeyState(17) & 0x8000) else 0
-					alt_down = 1 if (user32.GetAsyncKeyState(18) & 0x8000) else 0
-					win_down = (
-						1
-						if (user32.GetAsyncKeyState(91) & 0x8000) or (user32.GetAsyncKeyState(92) & 0x8000)
-						else 0
+					is_stop_gesture = (
+						action == "keyDown"
+						and vk == VK_R
+						and any(user32.GetAsyncKeyState(key) & 0x8000 for key in NVDA_MODIFIER_KEYS)
+						and bool(user32.GetAsyncKeyState(16) & 0x8000)
+						and bool(
+							user32.GetAsyncKeyState(91) & 0x8000 or user32.GetAsyncKeyState(92) & 0x8000,
+						)
 					)
-					major_mods_pressed = shift_down + ctrl_down + alt_down + win_down
-					modifiers = {16, 17, 18, 20, 45, 91, 92, 96, 160, 161, 162, 163, 164, 165}
-
-					if not nvda_down and major_mods_pressed < 2 and vk not in modifiers:
-						return 1
+					if is_stop_gesture and not self._safe_stop_requested and self._safe_stop_callback:
+						self._safe_stop_requested = True
+						core.callLater(0, self._safe_stop_callback)
+					return 1
 		return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
 
-	def force_release_modifiers(self):
-		# 160: LSHIFT, 161: RSHIFT(ext), 162: LCTRL, 163: RCTRL(ext), 164: LALT, 165: RALT(ext)
-		# 91: LWIN(ext), 92: RWIN(ext), 20: CapsLock, 45: Insert(ext), 96: Numpad0
-		modifiers = {
-			160: False,
-			161: True,
-			162: False,
-			163: True,
-			164: False,
-			165: True,
-			91: True,
-			92: True,
-			20: False,
-			45: True,
-			96: False,
-		}
-		for m_vk, extended in modifiers.items():
-			if user32.GetAsyncKeyState(m_vk) & 0x8000:
-				inp = Input()
-				inp.type = INPUT_KEYBOARD
-				inp.ii.ki.wVk = m_vk
-				inp.ii.ki.wScan = 0
-				flags = KEYEVENTF_KEYUP
-				if extended:
-					flags |= KEYEVENTF_EXTENDEDKEY
-				inp.ii.ki.dwFlags = flags
-				user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(Input))
+	@staticmethod
+	def _queue_message(message):
+		core.callLater(0, ui.message, message)
 
-	def play_macro(self, events_to_play, loop_count=1, speed=1.0, target_app=None):
-		if not events_to_play or self.is_playing:
-			return
+	@staticmethod
+	def _target_matches(target_app):
+		if not target_app:
+			return True, get_foreground_app()
+		current_app = get_foreground_app()
+		return bool(current_app and current_app.casefold() == target_app.casefold()), current_app
 
-		def playback_thread():
+	@staticmethod
+	def _send_key_event(event, *, force_key_up=False):
+		inp = Input()
+		inp.type = INPUT_KEYBOARD
+		inp.ii.ki.wVk = event["vkCode"]
+		inp.ii.ki.wScan = event["scanCode"]
+		flags = KEYEVENTF_EXTENDEDKEY if event.get("extended", False) else 0
+		if force_key_up or event["action"] == "keyUp":
+			flags |= KEYEVENTF_KEYUP
+		inp.ii.ki.dwFlags = flags
+		inp.ii.ki.time = 0
+		inp.ii.ki.dwExtraInfo = 0
+		if user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(Input)) != 1:
+			raise OSError(ctypes.get_last_error(), "SendInput failed")
+
+	def _release_injected_keys(self, pressed_keys):
+		for event in reversed(list(pressed_keys.values())):
+			try:
+				self._send_key_event(event, force_key_up=True)
+			except OSError as error:
+				logHandler.log.error(f"NVDAMacroManager: Failed to release an injected key: {error}")
+
+	def play_macro(self, events_to_play, loop_count=1, speed=1.0, target_app=None, start_delay=0.0):
+		try:
+			events = [MacroStorage._normalize_event(event) for event in events_to_play]
+			if not events or len(events) > MAX_MACRO_EVENTS:
+				raise MacroValidationError("Macro has no playable events")
+			if (
+				isinstance(loop_count, bool)
+				or not isinstance(loop_count, int)
+				or not 0 <= loop_count <= MAX_LOOP_COUNT
+			):
+				raise MacroValidationError("Invalid loop count")
+			if isinstance(speed, bool) or not isinstance(speed, (int, float)):
+				raise MacroValidationError("Invalid playback speed")
+			speed = float(speed)
+			if not math.isfinite(speed) or not 0 <= speed <= MAX_PLAYBACK_SPEED:
+				raise MacroValidationError("Invalid playback speed")
+			if isinstance(start_delay, bool) or not isinstance(start_delay, (int, float)):
+				raise MacroValidationError("Invalid start delay")
+			start_delay = float(start_delay)
+			if not math.isfinite(start_delay) or not 0 <= start_delay <= MAX_START_DELAY_SECONDS:
+				raise MacroValidationError("Invalid start delay")
+			target_app = MacroStorage._normalize_optional_app(target_app, "target_app")
+		except (MacroValidationError, TypeError) as error:
+			logHandler.log.error(f"NVDAMacroManager: Refusing to play an invalid macro: {error}")
+			self._queue_message(_("Cannot play this macro because its data is invalid."))
+			return False
+
+		with self._state_lock:
+			if self.is_playing or self.is_recording:
+				message = (
+					_("Please stop recording first.")
+					if self.is_recording
+					else _("A macro is already playing.")
+				)
+				self._queue_message(message)
+				return False
 			self.is_playing = True
 			self.stop_playback_event.clear()
-			for _ in range(40):
-				current_app = get_foreground_app()
-				if current_app and current_app.lower() != "nvda":
-					break
-				time.sleep(0.05)
 
-			if target_app:
-				current_app = get_foreground_app()
-				if current_app and current_app.lower() != target_app.lower():
-					core.requestCorePump(
-						lambda: ui.message(
-							_(
-								"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'.",
-							).format(target_app=target_app, current_app=current_app),
-						),
-					)
-					self.is_playing = False
+		def playback_thread():
+			pressed_keys = {}
+			completion_message = None
+			try:
+				for attempt in range(40):
+					if self.stop_playback_event.is_set():
+						break
+					current_app = get_foreground_app()
+					if not current_app or current_app.casefold() != "nvda":
+						break
+					self.stop_playback_event.wait(0.05)
+
+				target_matches, current_app = self._target_matches(target_app)
+				if not target_matches:
+					completion_message = _(
+						"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'.",
+					).format(target_app=target_app, current_app=current_app or _("unknown"))
 					return
 
-			self.force_release_modifiers()
-			loop_idx = 0
-			while True:
-				if self.stop_playback_event.is_set() or (loop_count != 0 and loop_idx >= loop_count):
-					break
-				for event in events_to_play:
-					if self.stop_playback_event.is_set():
-						break
-					actual_delay = event["delay"]
-					if speed <= 0:
-						actual_delay = 0.005
-					else:
-						actual_delay = actual_delay / speed
-					if event["action"] == "keyUp" and actual_delay < 0.035:
-						actual_delay = 0.035
-					if actual_delay > 0:
-						self.stop_playback_event.wait(actual_delay)
-					if self.stop_playback_event.is_set():
-						break
+				if start_delay > 0 and self.stop_playback_event.wait(start_delay):
+					return
 
-					inp = Input()
-					inp.type = INPUT_KEYBOARD
-					inp.ii.ki.wVk = event["vkCode"]
-					inp.ii.ki.wScan = event["scanCode"]
-					flags = 0
-					if event.get("extended", False):
-						flags |= KEYEVENTF_EXTENDEDKEY
-					if event["action"] == "keyUp":
-						flags |= KEYEVENTF_KEYUP
-					inp.ii.ki.dwFlags = flags
-					inp.ii.ki.time = 0
-					inp.ii.ki.dwExtraInfo = ctypes.cast(0, PUL)
-					user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(Input))
+				target_matches, current_app = self._target_matches(target_app)
+				if not target_matches:
+					completion_message = _(
+						"Macro stopped because the active application changed. Expected: "
+						"'{target_app}', current: '{current_app}'.",
+					).format(target_app=target_app, current_app=current_app or _("unknown"))
+					return
 
-				if not self.stop_playback_event.is_set():
-					self.stop_playback_event.wait(0.1)
-				loop_idx += 1
+				loop_idx = 0
+				while not self.stop_playback_event.is_set() and (loop_count == 0 or loop_idx < loop_count):
+					for event in events:
+						if self.stop_playback_event.is_set():
+							break
+						actual_delay = 0.005 if speed <= 0 else event["delay"] / speed
+						if event["action"] == "keyUp" and actual_delay < 0.035:
+							actual_delay = 0.035
+						if actual_delay > 0 and self.stop_playback_event.wait(actual_delay):
+							break
+						target_matches, current_app = self._target_matches(target_app)
+						if not target_matches:
+							completion_message = _(
+								"Macro stopped because the active application changed. Expected: "
+								"'{target_app}', current: '{current_app}'.",
+							).format(target_app=target_app, current_app=current_app or _("unknown"))
+							self.stop_playback_event.set()
+							break
 
-			self.is_playing = False
-			self.force_release_modifiers()
-
-			if self.stop_playback_event.is_set():
-				core.requestCorePump(lambda: ui.message(_("Macro playback canceled.")))
-			else:
-				core.requestCorePump(lambda: ui.message(_("Macro playback completed.")))
+						self._send_key_event(event)
+						key_id = (event["vkCode"], event["scanCode"], event["extended"])
+						if event["action"] == "keyDown":
+							pressed_keys[key_id] = event
+						else:
+							pressed_keys.pop(key_id, None)
+					if not self.stop_playback_event.is_set():
+						self.stop_playback_event.wait(0.1)
+					loop_idx += 1
+			except Exception as error:
+				logHandler.log.error(f"NVDAMacroManager: Macro playback error: {error}")
+				completion_message = _("Macro playback failed. See the NVDA log for details.")
+			finally:
+				self._release_injected_keys(pressed_keys)
+				with self._state_lock:
+					self.is_playing = False
+					self._playback_thread = None
+				if completion_message:
+					self._queue_message(completion_message)
+				elif self.stop_playback_event.is_set():
+					self._queue_message(_("Macro playback canceled."))
+				else:
+					self._queue_message(_("Macro playback completed."))
 
 		thread = threading.Thread(target=playback_thread)
 		thread.daemon = True
-		thread.start()
+		with self._state_lock:
+			self._playback_thread = thread
+		try:
+			thread.start()
+		except Exception as error:
+			with self._state_lock:
+				self.is_playing = False
+				self._playback_thread = None
+			logHandler.log.error(f"NVDAMacroManager: Failed to start playback thread: {error}")
+			self._queue_message(_("Macro playback failed. See the NVDA log for details."))
+			return False
+		return True
+
+	def shutdown(self):
+		self.stop_playback_event.set()
+		if self.is_recording or self.hook_id:
+			self.stop_recording()
+		thread = self._playback_thread
+		if thread and thread is not threading.current_thread():
+			thread.join(timeout=1.0)
 
 
 class KeyCaptureDialog(wx.Dialog):
@@ -469,7 +772,6 @@ class KeyCaptureDialog(wx.Dialog):
 
 		self.SetSizer(sizer)
 		self.Bind(wx.EVT_CHAR_HOOK, self.on_key)
-		apply_dark_theme(self)
 		self.CenterOnParent()
 
 	def on_key(self, event):
@@ -499,38 +801,38 @@ class KeySelectDialog(wx.Dialog):
 			letters_map[chr(vk)] = vk
 
 		sym_map = {
-			".": _(". (Nokta)"),
-			",": _(", (Virgül)"),
-			"-": _("- (Tire / Eksi)"),
-			'"': _('" (Tırnak)'),
-			"<": _("< (Küçüktür)"),
-			">": _("> (Büyüktür)"),
-			";": _("; (Noktalı Virgül)"),
-			":": _(": (İki Nokta)"),
-			"'": _("' (Tek Tırnak)"),
-			"`": _("` (Kesme / Vurgu)"),
+			".": _(". (Dot)"),
+			",": _(", (Comma)"),
+			"-": _("- (Hyphen / Minus)"),
+			'"': _('" (Double quote)'),
+			"<": _("< (Less than)"),
+			">": _("> (Greater than)"),
+			";": _("; (Semicolon)"),
+			":": _(": (Colon)"),
+			"'": _("' (Single quote)"),
+			"`": _("` (Grave accent)"),
 			"~": _("~ (Tilde)"),
-			"=": _("= (Eşittir)"),
-			"+": _("+ (Artı)"),
-			"[": _("[ (Sol Köşeli Parantez)"),
-			"]": _("] (Sağ Köşeli Parantez)"),
-			"{": _("{ (Sol Süslü Parantez)"),
-			"}": _("} (Sağ Süslü Parantez)"),
-			"\\": _("\\ (Ters Eğik Çizgi)"),
-			"/": _("/ (Eğik Çizgi)"),
-			"|": _("| (Düz Çizgi)"),
-			"?": _("? (Soru İşareti)"),
-			"!": _("! (Ünlem)"),
-			"@": _("@ (Bulunma / At)"),
-			"#": _("# (Kare)"),
-			"$": _("$ (Dolar)"),
-			"%": _("% (Yüzde)"),
-			"^": _("^ (Şapka)"),
-			"&": _("& (Ve)"),
-			"*": _("* (Yıldız / Çarpı)"),
-			"(": _("( (Sol Parantez)"),
-			")": _(") (Sağ Parantez)"),
-			"_": _("_ (Alt Tire)"),
+			"=": _("= (Equals)"),
+			"+": _("+ (Plus)"),
+			"[": _("[ (Left square bracket)"),
+			"]": _("] (Right square bracket)"),
+			"{": _("{ (Left brace)"),
+			"}": _("} (Right brace)"),
+			"\\": _("\\ (Backslash)"),
+			"/": _("/ (Slash)"),
+			"|": _("| (Vertical bar)"),
+			"?": _("? (Question mark)"),
+			"!": _("! (Exclamation mark)"),
+			"@": _("@ (At sign)"),
+			"#": _("# (Number sign)"),
+			"$": _("$ (Dollar sign)"),
+			"%": _("% (Percent sign)"),
+			"^": _("^ (Caret)"),
+			"&": _("& (Ampersand)"),
+			"*": _("* (Asterisk)"),
+			"(": _("( (Left parenthesis)"),
+			")": _(") (Right parenthesis)"),
+			"_": _("_ (Underscore)"),
 		}
 
 		local_chars = []
@@ -570,15 +872,15 @@ class KeySelectDialog(wx.Dialog):
 			return order.index(char) if char in order else 1000 + ord(char)
 
 		sorted_letters = sorted(letters_map.items(), key=lambda item: char_sort_key(item[0]))
-		options.append((f"--- {_('Letters (Harfler)')} ---", 0))
+		options.append((f"--- {_('Letters')} ---", 0))
 		options.extend(sorted_letters)
 
 		if local_chars:
 			local_chars.sort(key=lambda x: x[0])
-			options.append((f"--- {_('Punctuation (Yazım İşaretleri)')} ---", 0))
+			options.append((f"--- {_('Punctuation')} ---", 0))
 			options.extend(local_chars)
 
-		options.append((f"--- {_('Numbers (Sayılar)')} ---", 0))
+		options.append((f"--- {_('Numbers')} ---", 0))
 		for vk in range(48, 58):
 			options.append((chr(vk), vk))
 
@@ -587,52 +889,52 @@ class KeySelectDialog(wx.Dialog):
 			options.append((f"Numpad {i}", 96 + i))
 		options.extend(
 			[
-				(_("Numpad Multiply (Çarp)"), 106),
-				(_("Numpad Add (Topla)"), 107),
-				(_("Numpad Subtract (Çıkar)"), 109),
-				(_("Numpad Decimal (Ondalık)"), 110),
-				(_("Numpad Divide (Böl)"), 111),
+				(_("Numpad Multiply"), 106),
+				(_("Numpad Add"), 107),
+				(_("Numpad Subtract"), 109),
+				(_("Numpad Decimal"), 110),
+				(_("Numpad Divide"), 111),
 			],
 		)
 
-		options.append((f"--- {_('Function (F) Keys')} ---", 0))
+		options.append((f"--- {_('Function keys')} ---", 0))
 		for i in range(1, 13):
 			options.append((f"F{i}", 111 + i))
 
-		options.append((f"--- {_('Navigation (Yön ve Gezinme)')} ---", 0))
+		options.append((f"--- {_('Navigation')} ---", 0))
 		options.extend(
 			[
-				(_("Left Arrow (Sol Ok)"), 37),
-				(_("Up Arrow (Yukarı Ok)"), 38),
-				(_("Right Arrow (Sağ Ok)"), 39),
-				(_("Down Arrow (Aşağı Ok)"), 40),
-				(_("Page Up (Sayfa Yukarı)"), 33),
-				(_("Page Down (Sayfa Aşağı)"), 34),
-				(_("Home (Baş)"), 36),
-				(_("End (Son)"), 35),
+				(_("Left Arrow"), 37),
+				(_("Up Arrow"), 38),
+				(_("Right Arrow"), 39),
+				(_("Down Arrow"), 40),
+				(_("Page Up"), 33),
+				(_("Page Down"), 34),
+				(_("Home"), 36),
+				(_("End"), 35),
 			],
 		)
 
-		options.append((f"--- {_('System & Edit (Sistem)')} ---", 0))
+		options.append((f"--- {_('System and editing')} ---", 0))
 		options.extend(
 			[
-				(_("Backspace (Geri Sil)"), 8),
-				(_("Tab (Sekme)"), 9),
+				(_("Backspace"), 8),
+				(_("Tab"), 9),
 				(_("Enter"), 13),
-				(_("Space (Boşluk)"), 32),
-				(_("Insert (Araya Ekle)"), 45),
-				(_("Delete (Sil)"), 46),
-				(_("Escape (İptal)"), 27),
+				(_("Space"), 32),
+				(_("Insert"), 45),
+				(_("Delete"), 46),
+				(_("Escape"), 27),
 				(_("Shift"), 16),
 				(_("Ctrl"), 17),
 				(_("Alt"), 18),
-				(_("Win (Başlat)"), 91),
-				(_("Menu (Bağlam/Uygulama)"), 93),
-				(_("Caps Lock (Büyük Harf Kilidi)"), 20),
-				(_("Num Lock (Sayı Kilidi)"), 144),
-				(_("Scroll Lock (Kaydırma Kilidi)"), 145),
-				(_("Pause (Duraklat)"), 19),
-				(_("Print Screen (Ekran Görüntüsü)"), 44),
+				(_("Windows"), 91),
+				(_("Application key"), 93),
+				(_("Caps Lock"), 20),
+				(_("Num Lock"), 144),
+				(_("Scroll Lock"), 145),
+				(_("Pause"), 19),
+				(_("Print Screen"), 44),
 			],
 		)
 		return options
@@ -678,7 +980,6 @@ class KeySelectDialog(wx.Dialog):
 		main_sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER)
 
 		self.SetSizer(main_sizer)
-		apply_dark_theme(self)
 		self.CenterOnParent()
 
 	def on_capture_click(self, event):
@@ -720,9 +1021,9 @@ class AddEventDialog(wx.Dialog):
 
 		main_sizer.Add(wx.StaticText(self, label=_("Event Type:")), 0, wx.ALL, 10)
 		self.type_choices = [
-			_("Press (Bas-Çek)"),
-			_("Key Down (Tuş Aşağı)"),
-			_("Key Up (Tuş Yukarı)"),
+			_("Press"),
+			_("Key Down"),
+			_("Key Up"),
 			_("Wait"),
 		]
 		self.type_values = ["press", "keyDown", "keyUp", "delay"]
@@ -775,7 +1076,6 @@ class AddEventDialog(wx.Dialog):
 
 		self.SetSizer(main_sizer)
 		self.update_visibility()
-		apply_dark_theme(self)
 		self.CenterOnParent()
 
 	def on_type_change(self, event):
@@ -800,6 +1100,8 @@ class AddEventDialog(wx.Dialog):
 				"scanCode": dlg.captured_scan,
 				"extended": dlg.captured_ext,
 			}
+			if self.new_event["type"] == "press":
+				self.new_event["hold"] = 0.035
 			dlg.Destroy()
 			self.EndModal(wx.ID_OK)
 		else:
@@ -825,6 +1127,8 @@ class AddEventDialog(wx.Dialog):
 						"scanCode": 0,
 						"extended": False,
 					}
+					if sel_type == "press":
+						self.new_event["hold"] = 0.035
 					self.EndModal(wx.ID_OK)
 					return
 			ui.message(_("Please select a valid key from the list."))
@@ -832,7 +1136,7 @@ class AddEventDialog(wx.Dialog):
 
 class MacroEditDialog(wx.Dialog):
 	def __init__(self, parent, macro_data):
-		super(MacroEditDialog, self).__init__(parent, title=_("Edit Macro (IDE)"), size=(600, 650))
+		super(MacroEditDialog, self).__init__(parent, title=_("Edit Macro (IDE)"), size=(600, 680))
 		self.macro_data = macro_data
 		original_events = copy.deepcopy(macro_data.get("events", []))
 		self.linear_events = self._linearize_events(original_events)
@@ -842,7 +1146,8 @@ class MacroEditDialog(wx.Dialog):
 		self.clipboard_events = []
 
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
-		grid_sizer = wx.FlexGridSizer(4, 2, 5, 5)
+		grid_sizer = wx.FlexGridSizer(5, 2, 5, 5)
+		grid_sizer.AddGrowableCol(1)
 
 		grid_sizer.Add(wx.StaticText(self, label=_("Macro Name:")), 0, wx.ALIGN_CENTER_VERTICAL)
 		self.name_text = wx.TextCtrl(self, value=macro_data["name"])
@@ -882,12 +1187,27 @@ class MacroEditDialog(wx.Dialog):
 		)
 		grid_sizer.Add(self.speed_combo, 1, wx.EXPAND)
 
+		grid_sizer.Add(wx.StaticText(self, label=_("Start Delay (seconds):")), 0, wx.ALIGN_CENTER_VERTICAL)
+		self.start_delay_choices = ["0", "0.25", "0.5", "1.0", "2.0", "3.0", "5.0", "10.0"]
+		self.start_delay_combo = wx.ComboBox(
+			self,
+			choices=self.start_delay_choices,
+			style=wx.CB_DROPDOWN,
+		)
+		self.start_delay_combo.SetValue(str(macro_data.get("start_delay", 0.0)))
+		self.start_delay_combo.SetName(
+			_(
+				"Start Delay. This wait happens once before playback and is not affected by playback speed.",
+			),
+		)
+		grid_sizer.Add(self.start_delay_combo, 1, wx.EXPAND)
+
 		grid_sizer.Add(wx.StaticText(self, label=_("Security:")), 0, wx.ALIGN_CENTER_VERTICAL)
-		self.rec_app = macro_data.get("recorded_app", macro_data.get("target_app"))
-		if self.rec_app:
+		self.lock_app = get_preferred_lock_app(macro_data)
+		if self.lock_app:
 			self.app_checkbox = wx.CheckBox(
 				self,
-				label=_("Run only in '{app_name}' application").format(app_name=self.rec_app),
+				label=_("Run only in '{app_name}' application").format(app_name=self.lock_app),
 			)
 		else:
 			self.app_checkbox = wx.CheckBox(self, label=_("Lock to current active application"))
@@ -940,7 +1260,6 @@ class MacroEditDialog(wx.Dialog):
 		main_sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER)
 
 		self.SetSizer(main_sizer)
-		apply_dark_theme(self)
 		self.Bind(wx.EVT_CHAR_HOOK, self.on_escape_press)
 
 		del_id = wx.NewIdRef()
@@ -1067,6 +1386,7 @@ class MacroEditDialog(wx.Dialog):
 							"vkCode": e1["vkCode"],
 							"scanCode": e1["scanCode"],
 							"extended": e1.get("extended", False),
+							"hold": e2.get("delay", 0.035),
 						},
 					)
 					i += 2
@@ -1098,7 +1418,7 @@ class MacroEditDialog(wx.Dialog):
 						"delay": current_delay,
 					},
 				)
-				current_delay = 0.035
+				current_delay = e.get("hold", 0.035)
 				rebuilt.append(
 					{
 						"action": "keyUp",
@@ -1170,7 +1490,8 @@ class MacroEditDialog(wx.Dialog):
 				str_list.append(f"{ui_idx}. {_('Wait')}: {int(e['delay'] * 1000)} ms")
 			elif e["type"] == "press":
 				key_name = get_key_name(e["vkCode"], e["scanCode"], e["extended"])
-				str_list.append(f"{ui_idx}. {_('Press')}: {key_name}")
+				hold_ms = int(e.get("hold", 0.035) * 1000)
+				str_list.append(f"{ui_idx}. {_('Press')}: {key_name} ({_('hold')}: {hold_ms} ms)")
 			elif e["type"] == "keyDown":
 				key_name = get_key_name(e["vkCode"], e["scanCode"], e["extended"])
 				str_list.append(f"{ui_idx}. {_('Key Down')}: {key_name}")
@@ -1288,25 +1609,34 @@ class MacroEditDialog(wx.Dialog):
 
 	def _parse_speed(self):
 		raw_val = self.speed_combo.GetValue().strip()
-		str_val = raw_val.split()[0].replace(",", ".")
 		try:
+			str_val = raw_val.split()[0].replace(",", ".")
 			val = float(str_val)
 			if val < 0:
 				return 0.0
 			return val
-		except ValueError:
+		except (IndexError, ValueError):
 			return 1.0
 
+	def _parse_start_delay(self):
+		raw_val = self.start_delay_combo.GetValue().strip()
+		try:
+			str_val = raw_val.split()[0].replace(",", ".")
+			val = float(str_val)
+			if val < 0:
+				return 0.0
+			return val
+		except (IndexError, ValueError):
+			return 0.0
+
 	def get_updated_data(self):
-		target_app = self.rec_app
-		if not target_app and self.app_checkbox.GetValue():
-			target_app = get_foreground_app()
-		final_target = target_app if self.app_checkbox.GetValue() else None
+		final_target = resolve_target_application(self.app_checkbox.GetValue(), self.lock_app)
 		loop_c = 0 if self.infinite_check.GetValue() else self.loop_spin.GetValue()
 		return {
 			"name": self.name_text.GetValue().strip() or _("Untitled Macro"),
 			"loop_count": loop_c,
 			"speed": self._parse_speed(),
+			"start_delay": self._parse_start_delay(),
 			"target_app": final_target,
 			"events": self._rebuild_events(self.linear_events),
 		}
@@ -1314,7 +1644,7 @@ class MacroEditDialog(wx.Dialog):
 
 class MacroManagerDialog(wx.Dialog):
 	def __init__(self, parent, engine, storage, events_buffer, recorded_app, clear_buffer_callback):
-		super(MacroManagerDialog, self).__init__(parent, title=_("Macro Manager"), size=(480, 650))
+		super(MacroManagerDialog, self).__init__(parent, title=_("Macro Manager"), size=(480, 680))
 		self.engine = engine
 		self.storage = storage
 		self.events_buffer = events_buffer
@@ -1368,7 +1698,8 @@ class MacroManagerDialog(wx.Dialog):
 				wx.ALL,
 				5,
 			)
-			grid_sizer = wx.FlexGridSizer(4, 2, 5, 5)
+			grid_sizer = wx.FlexGridSizer(5, 2, 5, 5)
+			grid_sizer.AddGrowableCol(1)
 			grid_sizer.Add(wx.StaticText(self, label=_("Macro Name:")), 0, wx.ALIGN_CENTER_VERTICAL)
 			self.name_text = wx.TextCtrl(self, value=_("New Macro"))
 			self.name_text.SetName(_("Macro Name"))
@@ -1395,6 +1726,24 @@ class MacroManagerDialog(wx.Dialog):
 				_("Playback Speed. Choose a preset or type your own, like 1.3. 0 is instant."),
 			)
 			grid_sizer.Add(self.speed_combo, 1, wx.EXPAND)
+			grid_sizer.Add(
+				wx.StaticText(self, label=_("Start Delay (seconds):")),
+				0,
+				wx.ALIGN_CENTER_VERTICAL,
+			)
+			self.start_delay_choices = ["0", "0.25", "0.5", "1.0", "2.0", "3.0", "5.0", "10.0"]
+			self.start_delay_combo = wx.ComboBox(
+				self,
+				choices=self.start_delay_choices,
+				style=wx.CB_DROPDOWN,
+			)
+			self.start_delay_combo.SetValue("0")
+			self.start_delay_combo.SetName(
+				_(
+					"Start Delay. This wait happens once before playback and is not affected by playback speed.",
+				),
+			)
+			grid_sizer.Add(self.start_delay_combo, 1, wx.EXPAND)
 			grid_sizer.Add(wx.StaticText(self, label=_("Security:")), 0, wx.ALIGN_CENTER_VERTICAL)
 			app_label = (
 				_("Run only in '{app_name}' application").format(app_name=self.recorded_app)
@@ -1414,7 +1763,6 @@ class MacroManagerDialog(wx.Dialog):
 		main_sizer.Add(self.btn_close, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
 
 		self.SetSizer(main_sizer)
-		apply_dark_theme(self)
 		self.Bind(wx.EVT_CHAR_HOOK, self.on_escape_press)
 
 		del_id = wx.NewIdRef()
@@ -1446,6 +1794,7 @@ class MacroManagerDialog(wx.Dialog):
 				macro.get("loop_count", 1),
 				float(macro.get("speed", 1.0)),
 				macro.get("target_app", None),
+				float(macro.get("start_delay", 0.0)),
 			)
 
 	def on_edit_click(self, event):
@@ -1454,10 +1803,14 @@ class MacroManagerDialog(wx.Dialog):
 			macro = self.storage.macros[sels[0]]
 			dlg = MacroEditDialog(self, macro)
 			if dlg.ShowModal() == wx.ID_OK:
-				self.storage.update_macro(sels[0], dlg.get_updated_data())
-				ui.message(_("Macro updated successfully."))
-				self.refresh_list()
-				self.macro_list.SetSelection(sels[0])
+				try:
+					self.storage.update_macro(sels[0], dlg.get_updated_data())
+					ui.message(_("Macro updated successfully."))
+					self.refresh_list()
+					self.macro_list.SetSelection(sels[0])
+				except (MacroValidationError, MacroStorageError) as error:
+					logHandler.log.error(f"NVDAMacroManager: Failed to update macro: {error}")
+					ui.message(_("Could not update the macro. See the NVDA log for details."))
 			dlg.Destroy()
 			self.macro_list.SetFocus()
 
@@ -1465,14 +1818,16 @@ class MacroManagerDialog(wx.Dialog):
 		sels = list(self.macro_list.GetSelections())
 		if sels and self.storage.macros:
 			sels.sort(reverse=True)
-			if len(sels) == 1:
-				deleted_name = self.storage.macros[sels[0]]["name"]
-				self.storage.delete_macro(sels[0])
-				ui.message(_("Macro '{name}' deleted.").format(name=deleted_name))
+			try:
+				deleted_names = self.storage.delete_macros(sels)
+			except MacroStorageError as error:
+				logHandler.log.error(f"NVDAMacroManager: Failed to delete macro: {error}")
+				ui.message(_("Could not delete the selected macros. See the NVDA log for details."))
+				return
+			if len(deleted_names) == 1:
+				ui.message(_("Macro '{name}' deleted.").format(name=deleted_names[0]))
 			else:
-				for s in sels:
-					self.storage.delete_macro(s)
-				ui.message(_("{count} macros deleted.").format(count=len(sels)))
+				ui.message(_("{count} macros deleted.").format(count=len(deleted_names)))
 			self.refresh_list()
 			if self.storage.macros:
 				self.macro_list.SetSelection(max(0, sels[-1] - 1))
@@ -1495,7 +1850,8 @@ class MacroManagerDialog(wx.Dialog):
 					with open(fileDialog.GetPath(), "w", encoding="utf-8") as f:
 						json.dump(macro, f, ensure_ascii=False, indent=4)
 					ui.message(_("Macro '{name}' exported successfully.").format(name=macro["name"]))
-				except Exception as e:
+				except (OSError, TypeError) as error:
+					logHandler.log.error(f"NVDAMacroManager: Export failed: {error}")
 					ui.message(_("Export failed."))
 			self.macro_list.SetFocus()
 
@@ -1509,14 +1865,21 @@ class MacroManagerDialog(wx.Dialog):
 			if fileDialog.ShowModal() == wx.ID_CANCEL:
 				return
 			try:
+				if os.path.getsize(fileDialog.GetPath()) > MAX_DECOMPRESSED_MACRO_BYTES:
+					raise MacroValidationError("Macro file is too large")
 				with open(fileDialog.GetPath(), "r", encoding="utf-8") as f:
-					if self.storage.import_macro(json.load(f)):
-						self.refresh_list()
-						ui.message(_("Macro imported successfully."))
-						self.macro_list.SetSelection(len(self.storage.macros) - 1)
-					else:
-						ui.message(_("Invalid macro file."))
-			except Exception as e:
+					self.storage.import_macro(json.load(f))
+				self.refresh_list()
+				ui.message(_("Macro imported successfully."))
+				self.macro_list.SetSelection(len(self.storage.macros) - 1)
+			except (
+				OSError,
+				UnicodeError,
+				json.JSONDecodeError,
+				MacroValidationError,
+				MacroStorageError,
+			) as error:
+				logHandler.log.error(f"NVDAMacroManager: Import failed: {error}")
 				ui.message(_("Import failed."))
 		self.macro_list.SetFocus()
 
@@ -1547,25 +1910,33 @@ class MacroManagerDialog(wx.Dialog):
 		try:
 			val = float(self.speed_combo.GetValue().strip().split()[0].replace(",", "."))
 			return val if val >= 0 else 0.0
-		except ValueError:
+		except (IndexError, ValueError):
 			return 1.0
 
+	def _parse_start_delay(self):
+		try:
+			val = float(self.start_delay_combo.GetValue().strip().split()[0].replace(",", "."))
+			return val if val >= 0 else 0.0
+		except (IndexError, ValueError):
+			return 0.0
+
 	def on_save_click(self, event):
-		target_app = (
-			get_foreground_app()
-			if (not self.recorded_app and self.app_checkbox.GetValue())
-			else self.recorded_app
-		)
-		final_target = target_app if self.app_checkbox.GetValue() else None
 		name = self.name_text.GetValue().strip() or _("Untitled Macro")
-		self.storage.save_macro(
-			name,
-			0 if self.infinite_check.GetValue() else self.loop_spin.GetValue(),
-			self._parse_speed(),
-			final_target,
-			target_app,
-			self.events_buffer,
-		)
+		try:
+			final_target = resolve_target_application(self.app_checkbox.GetValue(), self.recorded_app)
+			self.storage.save_macro(
+				name,
+				0 if self.infinite_check.GetValue() else self.loop_spin.GetValue(),
+				self._parse_speed(),
+				final_target,
+				self.recorded_app,
+				self.events_buffer,
+				self._parse_start_delay(),
+			)
+		except (MacroValidationError, MacroStorageError) as error:
+			logHandler.log.error(f"NVDAMacroManager: Failed to save macro: {error}")
+			ui.message(_("Could not save the macro. See the NVDA log for details."))
+			return
 		ui.message(_("Macro '{name}' saved successfully.").format(name=name))
 		self.clear_buffer_callback()
 		self.refresh_list()
@@ -1592,7 +1963,7 @@ class MacroManagerDialog(wx.Dialog):
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self):
 		super(GlobalPlugin, self).__init__()
-		self.engine = MacroEngine()
+		self.engine = MacroEngine(safe_stop_callback=self._stop_recording_and_notify)
 		self.storage = MacroStorage(update_scripts_callback=self.inject_dynamic_scripts)
 		self.gui_instance = None
 		self.last_recorded_events = []
@@ -1606,13 +1977,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				delattr(cls, attr)
 
 		for m in self.storage.macros:
-			safe_id = m["id"].replace(".", "_")
+			macro_id = m["id"]
+			safe_id = re.sub(r"[^0-9A-Za-z_]", "_", str(macro_id))
 			func_name = f"script_dynmacro_{safe_id}"
 
-			def make_script(macro_data, fname):
+			def make_script(current_macro_id, fname):
 				def _script_func(self_inst, gesture):
 					if self_inst.engine.is_playing:
 						self_inst.engine.stop_playback_event.set()
+						return
+					macro_data = next(
+						(macro for macro in self_inst.storage.macros if macro["id"] == current_macro_id),
+						None,
+					)
+					if macro_data is None:
+						logHandler.log.error(
+							f"NVDAMacroManager: Dynamic script could not find macro {current_macro_id}",
+						)
 						return
 					ui.message(_("Playing: {name}").format(name=macro_data["name"]))
 					self_inst.engine.play_macro(
@@ -1620,6 +2001,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 						macro_data.get("loop_count", 1),
 						float(macro_data.get("speed", 1.0)),
 						macro_data.get("target_app", None),
+						float(macro_data.get("start_delay", 0.0)),
 					)
 
 				_script_func.__name__ = fname
@@ -1629,7 +2011,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			decorated_script = scriptHandler.script(
 				description=_("Custom Macro: {name}").format(name=m["name"]),
 				category=_("Macro Manager"),
-			)(make_script(m, func_name))
+			)(make_script(macro_id, func_name))
 			setattr(cls, func_name, decorated_script)
 
 	def clear_buffer(self):
@@ -1643,8 +2025,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	def script_toggleMacroRecordingLive(self, gesture):
 		if not self.engine.is_recording:
-			self.engine.start_recording(safe_mode=False)
-			ui.message(_("Live macro recording started."))
+			if self.engine.start_recording(safe_mode=False):
+				ui.message(_("Live macro recording started."))
+			else:
+				ui.message(_("Could not start macro recording. See the NVDA log for details."))
 		else:
 			self._stop_recording_and_notify()
 
@@ -1655,12 +2039,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	def script_toggleMacroRecordingSafe(self, gesture):
 		if not self.engine.is_recording:
-			self.engine.start_recording(safe_mode=True)
-			ui.message(_("Safe macro recording started. Keys are hidden."))
+			if self.engine.start_recording(safe_mode=True):
+				ui.message(_("Safe macro recording started. Keys are hidden."))
+			else:
+				ui.message(_("Could not start macro recording. See the NVDA log for details."))
 		else:
 			self._stop_recording_and_notify()
 
 	def _stop_recording_and_notify(self):
+		if not self.engine.is_recording:
+			return
 		self.last_recorded_events, self.last_recorded_app = self.engine.stop_recording()
 		ui.message(
 			_("Recording stopped. {count} events captured.").format(count=len(self.last_recorded_events)),
@@ -1690,6 +2078,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def script_openMacroInterface(self, gesture):
 		if self.engine.is_recording:
 			self._stop_recording_and_notify()
+		if self.gui_instance:
+			try:
+				if self.gui_instance.IsShown():
+					self.gui_instance.Raise()
+					self.gui_instance.SetFocus()
+					return
+			except RuntimeError:
+				self.gui_instance = None
 		gui.mainFrame.prePopup()
 		self.gui_instance = MacroManagerDialog(
 			gui.mainFrame,
@@ -1699,5 +2095,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.last_recorded_app,
 			self.clear_buffer,
 		)
+		self.gui_instance.Bind(wx.EVT_WINDOW_DESTROY, self._on_manager_destroyed)
 		self.gui_instance.Show()
 		gui.mainFrame.postPopup()
+
+	def _on_manager_destroyed(self, event):
+		if event.GetEventObject() is self.gui_instance:
+			self.gui_instance = None
+		event.Skip()
+
+	def terminate(self):
+		self.engine.shutdown()
+		if self.gui_instance:
+			try:
+				self.gui_instance.Destroy()
+			except RuntimeError:
+				pass
+			self.gui_instance = None
+		super().terminate()

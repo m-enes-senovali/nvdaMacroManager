@@ -14,15 +14,16 @@ addon_info = AddonInfo(
 	addon_summary=_("NVDA Macro Manager"),
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
-	addon_description=_("""A high-performance, OS-level macro recording, editing, and playback engine.
-Features include Stealth Mode recording, multi-event IDE, custom shortcuts, and dynamic speed multipliers."""),
+	addon_description=_("""An accessible keyboard macro recorder, editor, and playback engine for NVDA.
+Features include safe recording, a multi-event editor, custom shortcuts, application locks, and speed controls."""),
 	# version
-	addon_version="1.2.3",
+	addon_version="1.2.4",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
-	addon_changelog=_("""Added Clipboard Sharing feature to copy/import macros as Base64/Zlib text.
-Fixed a critical bug where modifier keys (like Ctrl) could get stuck after macro playback.
-Migrated to the official NVDA AddonTemplate structure."""),
+	addon_changelog=_("""Hardened safe recording, playback cancellation, persistent application locks, and Windows hook handling.
+Added strict macro validation, bounded imports, atomic database writes, shutdown cleanup, and complete Portuguese, German, Spanish, and Turkish catalogs.
+Preserved edited key hold durations, made shared macro loop-count edits take effect immediately, and added local regression tests and continuous type checking.
+Added a per-macro, speed-independent start delay that is preserved when macros are edited or shared."""),
 	# Author(s)
 	addon_author="Muhammet Enes Senovali <mesenovali@gmail.com>",
 	# URL for the add-on documentation support
@@ -50,7 +51,7 @@ pythonSources: list[str] = ["addon/globalPlugins/*.py"]
 i18nSources: list[str] = pythonSources + ["buildVars.py"]
 
 # Files that will be ignored when building the nvda-addon file
-excludedFiles: list[str] = []
+excludedFiles: list[str] = ["**/__pycache__/**", "**/*.pyc", "**/*.pyo", "**/.DS_Store"]
 
 # Base language for the NVDA add-on
 baseLanguage: str = "en"

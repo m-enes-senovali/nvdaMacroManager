@@ -1,45 +1,226 @@
+"""Synchronize add-on gettext catalogs without requiring GNU gettext locally."""
+
+from __future__ import annotations
+
+import ast
+from datetime import UTC, datetime
+from pathlib import Path
+
 import polib
 
-po_path = "addon/locale/tr/LC_MESSAGES/nvda.po"
-mo_path = "addon/locale/tr/LC_MESSAGES/nvda.mo"
 
-with open(po_path, "r", encoding="utf-8") as f:
-	content = f.read()
+ROOT = Path(__file__).resolve().parent
+SOURCE_FILES = (ROOT / "addon/globalPlugins/nvda_macro_manager.py", ROOT / "buildVars.py")
+LOCALE_ROOT = ROOT / "addon/locale"
 
-bad_str = (
-	'msgstr ""\\n"Yeni bekleme süresini milisaniye (ms) cinsinden girin:\\n"\\n"(Örnek: 1 saniye için 1000)"'
-)
-good_str = (
-	'msgstr ""\n"Yeni bekleme süresini milisaniye (ms) cinsinden girin:\\n"\n"(Örnek: 1 saniye için 1000)"'
-)
-content = content.replace(bad_str, good_str)
-
-with open(po_path, "w", encoding="utf-8") as f:
-	f.write(content)
-
-po = polib.pofile(po_path)
-
-translations = {
-	"No valid macro code found in clipboard.": "Panoda geçerli bir makro kodu bulunamadı.",
-	"Invalid macro format in clipboard.": "Panodaki makro formatı geçersiz.",
-	"Failed to decode macro from clipboard.": "Panodaki makro çözümlenemedi.",
-	"Import from Clipboard": "Panodan İçe Aktar",
-	"Copy to Clipboard": "Panoya Kopyala",
-	"Macro '{name}' copied to clipboard.": "Makro '{name}' panoya kopyalandı.",
-	"Failed to copy macro to clipboard.": "Makro panoya kopyalanamadı.",
-	"Imported macro: {name}": "İçe aktarılan makro: {name}",
-	"Import File": "Dosyadan İçe Aktar",
-	"Export File": "Dosyaya Dışa Aktar",
+TURKISH_TRANSLATIONS = {
+	"! (Exclamation mark)": "! (Ünlem işareti)",
+	'" (Double quote)': '" (Çift tırnak)',
+	"# (Number sign)": "# (Kare işareti)",
+	"$ (Dollar sign)": "$ (Dolar işareti)",
+	"% (Percent sign)": "% (Yüzde işareti)",
+	"& (Ampersand)": "& (Ve işareti)",
+	"' (Single quote)": "' (Tek tırnak)",
+	"( (Left parenthesis)": "( (Sol parantez)",
+	") (Right parenthesis)": ") (Sağ parantez)",
+	"* (Asterisk)": "* (Yıldız)",
+	"+ (Plus)": "+ (Artı)",
+	", (Comma)": ", (Virgül)",
+	"- (Hyphen / Minus)": "- (Tire / Eksi)",
+	". (Dot)": ". (Nokta)",
+	"/ (Slash)": "/ (Eğik çizgi)",
+	": (Colon)": ": (İki nokta)",
+	"; (Semicolon)": "; (Noktalı virgül)",
+	"< (Less than)": "< (Küçüktür)",
+	"= (Equals)": "= (Eşittir)",
+	"> (Greater than)": "> (Büyüktür)",
+	"? (Question mark)": "? (Soru işareti)",
+	"@ (At sign)": "@ (Et işareti)",
+	"[ (Left square bracket)": "[ (Sol köşeli parantez)",
+	"\\ (Backslash)": "\\ (Ters eğik çizgi)",
+	"] (Right square bracket)": "] (Sağ köşeli parantez)",
+	"^ (Caret)": "^ (Düzeltme işareti)",
+	"_ (Underscore)": "_ (Alt çizgi)",
+	"` (Grave accent)": "` (Ters aksan)",
+	"A macro is already playing.": "Bir makro zaten oynatılıyor.",
+	"Alt": "Alt",
+	"An accessible keyboard macro recorder, editor, and playback engine for NVDA.\nFeatures include safe recording, a multi-event editor, custom shortcuts, application locks, and speed controls.": "NVDA için erişilebilir bir klavye makrosu kayıt, düzenleme ve oynatma motoru.\nGüvenli kayıt, çok olaylı düzenleyici, özel kısayollar, uygulama kilitleri ve hız denetimleri içerir.",
+	"Application key": "Uygulama tuşu",
+	"Application Lock Security": "Uygulama Kilidi Güvenliği",
+	"Backspace": "Geri Silme",
+	"Cannot play this macro because its data is invalid.": "Verileri geçersiz olduğu için bu makro oynatılamıyor.",
+	"Cannot enable the application lock because no target application is available. Record the macro in the target application and try again.": "Hedef uygulama bulunamadığı için uygulama kilidi etkinleştirilemiyor. Makroyu hedef uygulamada kaydedip yeniden deneyin.",
+	"Caps Lock": "Büyük Harf Kilidi",
+	"Could not delete the selected macros. See the NVDA log for details.": "Seçili makrolar silinemedi. Ayrıntılar için NVDA günlüğüne bakın.",
+	"Could not save the macro. See the NVDA log for details.": "Makro kaydedilemedi. Ayrıntılar için NVDA günlüğüne bakın.",
+	"Could not start macro recording. See the NVDA log for details.": "Makro kaydı başlatılamadı. Ayrıntılar için NVDA günlüğüne bakın.",
+	"Could not update the macro. See the NVDA log for details.": "Makro güncellenemedi. Ayrıntılar için NVDA günlüğüne bakın.",
+	"Ctrl": "Ctrl",
+	"Delete": "Sil",
+	"Down Arrow": "Aşağı Ok",
+	"End": "Son",
+	"Enter": "Enter",
+	"Escape": "Kaçış",
+	"Function keys": "İşlev tuşları",
+	"Hardened safe recording, playback cancellation, persistent application locks, and Windows hook handling.\nAdded strict macro validation, bounded imports, atomic database writes, shutdown cleanup, and complete Portuguese, German, Spanish, and Turkish catalogs.\nPreserved edited key hold durations, made shared macro loop-count edits take effect immediately, and added local regression tests and continuous type checking.\nAdded a per-macro, speed-independent start delay that is preserved when macros are edited or shared.": "Güvenli kayıt, oynatma iptali, kalıcı uygulama kilitleri ve Windows kanca işleme mekanizması sağlamlaştırıldı.\nKatı makro doğrulaması, sınırlı içe aktarma, atomik veritabanı yazımı, kapanış temizliği ile eksiksiz Portekizce, Almanca, İspanyolca ve Türkçe kataloglar eklendi.\nDüzenlenen tuşların basılı tutma süreleri korundu, paylaşılan makrolardaki döngü sayısı düzenlemelerinin hemen geçerli olması sağlandı; yerel gerileme testleri ve sürekli tür denetimi eklendi.\nMakro başına, oynatma hızından bağımsız ve makrolar düzenlendiğinde veya paylaşıldığında korunan bir başlangıç gecikmesi eklendi.",
+	"Home": "Baş",
+	"hold": "basılı tutma",
+	"Insert": "Ekle",
+	"Key Down": "Tuş Aşağı",
+	"Key Up": "Tuş Yukarı",
+	"Key updated.": "Tuş güncellendi.",
+	"Left Arrow": "Sol Ok",
+	"Letters": "Harfler",
+	"Macro playback canceled.": "Makro oynatımı iptal edildi.",
+	"Macro playback completed.": "Makro oynatımı tamamlandı.",
+	"Macro playback failed. See the NVDA log for details.": "Makro oynatılamadı. Ayrıntılar için NVDA günlüğüne bakın.",
+	"Macro stopped because the active application changed. Expected: '{target_app}', current: '{current_app}'.": "Etkin uygulama değiştiği için makro durduruldu. Beklenen: '{target_app}', geçerli: '{current_app}'.",
+	"Navigation": "Gezinme",
+	"Num Lock": "Sayı Kilidi",
+	"Numpad": "Sayısal Tuş Takımı",
+	"Numpad Add": "Sayısal Tuş Takımı Artı",
+	"Numpad Decimal": "Sayısal Tuş Takımı Ondalık",
+	"Numpad Divide": "Sayısal Tuş Takımı Bölü",
+	"Numpad Enter": "Sayısal Tuş Takımı Enter",
+	"Numpad Multiply": "Sayısal Tuş Takımı Çarpı",
+	"Numpad Subtract": "Sayısal Tuş Takımı Eksi",
+	"Numbers": "Rakamlar",
+	"NVDA Macro Manager": "NVDA Makro Yöneticisi",
+	"Page Down": "Sayfa Aşağı",
+	"Page Up": "Sayfa Yukarı",
+	"Pause": "Duraklat",
+	"Please press the new key on your keyboard...\n(It will be captured automatically)": "Lütfen klavyenizdeki yeni tuşa basın...\n(Otomatik olarak yakalanacaktır)",
+	"Press": "Bas ve Bırak",
+	"Press a New Key": "Yeni Bir Tuşa Basın",
+	"Print Screen": "Ekranı Yazdır",
+	"Punctuation": "Noktalama",
+	"Right Arrow": "Sağ Ok",
+	"Scroll Lock": "Kaydırma Kilidi",
+	"Shift": "Shift",
+	"Space": "Boşluk",
+	"Start Delay (seconds):": "Başlangıç Gecikmesi (saniye):",
+	"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Başlangıç Gecikmesi. Bu bekleme oynatmadan önce bir kez uygulanır ve oynatma hızından etkilenmez.",
+	"System": "Sistem",
+	"System and editing": "Sistem ve düzenleme",
+	"Tab": "Sekme",
+	"unknown": "bilinmiyor",
+	"Up Arrow": "Yukarı Ok",
+	"Windows": "Windows",
+	"{ (Left brace)": "{ (Sol küme parantezi)",
+	"| (Vertical bar)": "| (Dikey çizgi)",
+	"} (Right brace)": "} (Sağ küme parantezi)",
+	"~ (Tilde)": "~ (Tilde)",
 }
 
-for msgid, msgstr in translations.items():
-	entry = po.find(msgid)
-	if entry:
-		entry.msgstr = msgstr
-	else:
-		entry = polib.POEntry(msgid=msgid, msgstr=msgstr)
-		po.append(entry)
+CHANGELOG_MSGID = (
+	"Hardened safe recording, playback cancellation, persistent application locks, and Windows hook handling.\n"
+	"Added strict macro validation, bounded imports, atomic database writes, shutdown cleanup, and complete "
+	"Portuguese, German, Spanish, and Turkish catalogs.\n"
+	"Preserved edited key hold durations, made shared macro loop-count edits take effect immediately, and added "
+	"local regression tests and continuous type checking.\n"
+	"Added a per-macro, speed-independent start delay that is preserved when macros are edited or shared."
+)
 
-po.save(po_path)
-po.save_as_mofile(mo_path)
-print("Translations updated successfully.")
+LOCALE_OVERRIDES = {
+	"tr": TURKISH_TRANSLATIONS,
+	"de": {
+		CHANGELOG_MSGID: "Sichere Aufzeichnung, Wiedergabeabbruch, dauerhafte Anwendungssperren und die Verarbeitung von Windows-Hooks wurden gehärtet.\nStrenge Makrovalidierung, begrenzte Importe, atomare Datenbankschreibvorgänge, Bereinigung beim Beenden sowie vollständige portugiesische, deutsche, spanische und türkische Kataloge wurden hinzugefügt.\nBearbeitete Tastenhaltezeiten bleiben erhalten, und Änderungen der Wiederholungsanzahl gemeinsam genutzter Makros werden sofort wirksam; lokale Regressionstests und kontinuierliche Typprüfung wurden ergänzt.\nEine makrospezifische, von der Wiedergabegeschwindigkeit unabhängige Startverzögerung wurde hinzugefügt und bleibt beim Bearbeiten oder Teilen von Makros erhalten.",
+		"Start Delay (seconds):": "Startverzögerung (Sekunden):",
+		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Startverzögerung. Diese Wartezeit wird einmal vor der Wiedergabe angewendet und nicht von der Wiedergabegeschwindigkeit beeinflusst.",
+	},
+	"es": {
+		CHANGELOG_MSGID: "Se reforzaron la grabación segura, la cancelación de reproducción, los bloqueos persistentes de aplicación y la gestión de ganchos de Windows.\nSe añadieron validación estricta de macros, importaciones limitadas, escrituras atómicas de la base de datos, limpieza al cerrar y catálogos completos en portugués, alemán, español y turco.\nSe conservaron las duraciones editadas de pulsación, las modificaciones del número de repeticiones de macros compartidas se aplican de inmediato y se añadieron pruebas de regresión locales y comprobación continua de tipos.\nSe añadió un retardo inicial por macro, independiente de la velocidad, que se conserva al editar o compartir macros.",
+		"Start Delay (seconds):": "Retardo inicial (segundos):",
+		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Retardo inicial. Esta espera se aplica una vez antes de la reproducción y no se ve afectada por la velocidad de reproducción.",
+	},
+	"pt_PT": {
+		CHANGELOG_MSGID: "Foram reforçados a gravação segura, o cancelamento da reprodução, os bloqueios persistentes de aplicação e o tratamento de hooks do Windows.\nForam adicionados validação rigorosa de macros, importações limitadas, escritas atómicas na base de dados, limpeza ao encerrar e catálogos completos em português, alemão, espanhol e turco.\nForam preservadas as durações editadas das teclas, as alterações ao número de repetições de macros partilhadas passam a ter efeito imediato e foram adicionados testes de regressão locais e verificação contínua de tipos.\nFoi adicionado um atraso inicial por macro, independente da velocidade, que é preservado ao editar ou partilhar macros.",
+		"Start Delay (seconds):": "Atraso inicial (segundos):",
+		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Atraso inicial. Esta espera ocorre uma vez antes da reprodução e não é afetada pela velocidade de reprodução.",
+	},
+}
+
+
+def extract_messages(path: Path) -> dict[str, list[tuple[str, int]]]:
+	tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+	messages: dict[str, list[tuple[str, int]]] = {}
+	for node in ast.walk(tree):
+		if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name) or node.func.id != "_":
+			continue
+		if (
+			not node.args
+			or not isinstance(node.args[0], ast.Constant)
+			or not isinstance(node.args[0].value, str)
+		):
+			continue
+		messages.setdefault(node.args[0].value, []).append((path.relative_to(ROOT).as_posix(), node.lineno))
+	return messages
+
+
+def load_catalog(path: Path) -> polib.POFile:
+	if path.exists():
+		return polib.pofile(str(path))
+	return polib.POFile()
+
+
+def synchronize_locale(
+	language: str,
+	messages: dict[str, list[tuple[str, int]]],
+	turkish_lookup: dict[str, str],
+) -> tuple[int, int]:
+	po_path = LOCALE_ROOT / language / "LC_MESSAGES/nvda.po"
+	mo_path = po_path.with_suffix(".mo")
+	old_po = load_catalog(po_path)
+	direct = {entry.msgid: entry.msgstr for entry in old_po if entry.msgstr and not entry.obsolete}
+	translated_turkish = {
+		entry.msgid: entry.msgstr for entry in old_po if entry.msgstr and not entry.obsolete
+	}
+
+	new_po = polib.POFile()
+	new_po.metadata = dict(old_po.metadata)
+	new_po.metadata.update(
+		{
+			"Project-Id-Version": "NVDAMacroManager 1.2.4",
+			"Content-Type": "text/plain; charset=UTF-8",
+			"Content-Transfer-Encoding": "8bit",
+			"Language": language,
+			"MIME-Version": "1.0",
+			"PO-Revision-Date": datetime.now(UTC).strftime("%Y-%m-%d %H:%M+0000"),
+		},
+	)
+
+	translated = 0
+	for msgid in sorted(messages, key=str.casefold):
+		msgstr = direct.get(msgid, "")
+		if language in LOCALE_OVERRIDES and (not msgstr or msgid == CHANGELOG_MSGID):
+			msgstr = LOCALE_OVERRIDES[language].get(msgid, msgstr)
+		elif not msgstr:
+			old_turkish_msgid = turkish_lookup.get(msgid)
+			if old_turkish_msgid:
+				msgstr = translated_turkish.get(old_turkish_msgid, "")
+		entry = polib.POEntry(msgid=msgid, msgstr=msgstr, occurrences=messages[msgid])
+		new_po.append(entry)
+		translated += bool(msgstr)
+
+	po_path.parent.mkdir(parents=True, exist_ok=True)
+	new_po.save(str(po_path))
+	new_po.save_as_mofile(str(mo_path))
+	return translated, len(new_po)
+
+
+def main() -> None:
+	messages: dict[str, list[tuple[str, int]]] = {}
+	for source in SOURCE_FILES:
+		for msgid, occurrences in extract_messages(source).items():
+			messages.setdefault(msgid, []).extend(occurrences)
+
+	tr_path = LOCALE_ROOT / "tr/LC_MESSAGES/nvda.po"
+	tr_po = load_catalog(tr_path)
+	turkish_lookup = {entry.msgid: entry.msgstr for entry in tr_po if entry.msgstr and not entry.obsolete}
+	for language in ("tr", "de", "es", "pt_PT"):
+		translated, total = synchronize_locale(language, messages, turkish_lookup)
+		print(f"{language}: {translated}/{total} translated; PO and MO updated")
+
+
+if __name__ == "__main__":
+	main()

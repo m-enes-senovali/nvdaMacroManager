@@ -1,7 +1,9 @@
+#
 msgid ""
-msgstr """Project-Id-Version: NVDAMacroManager 1.0.0\n"
+msgstr ""
+"Project-Id-Version: NVDAMacroManager 1.2.4\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: \n"
+"PO-Revision-Date: 2026-09-16 22:01+0000\n"
 "Last-Translator: \n"
 "Language-Team: Muhammet Enes Senovali\n"
 "Language: es\n"
@@ -10,376 +12,834 @@ msgstr """Project-Id-Version: NVDAMacroManager 1.0.0\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.9\n"
 
-msgid "Makro Yöneticisi"
-msgstr "Gestor de Macros"
+#: addon/globalPlugins/nvda_macro_manager.py:825
+msgid "! (Exclamation mark)"
+msgstr "! (Signo de exclamación)"
 
-msgid "Makro kaydı başladı."
-msgstr "Grabación de macro iniciada."
+#: addon/globalPlugins/nvda_macro_manager.py:807
+msgid "\" (Double quote)"
+msgstr "\" (Comillas dobles)"
 
-msgid "Kayıt durduruldu. {count} olay yakalandı."
-msgstr "Grabación detenida. {count} eventos capturados."
+#: addon/globalPlugins/nvda_macro_manager.py:827
+msgid "# (Number sign)"
+msgstr "# (Almohadilla)"
 
-msgid "Oynatılacak geçici makro yok."
-msgstr "No hay macro temporal para reproducir."
+#: addon/globalPlugins/nvda_macro_manager.py:828
+msgid "$ (Dollar sign)"
+msgstr "$ (Signo de dólar)"
 
-msgid "Önce kaydı durdurun."
-msgstr "Por favor, detenga la grabación primero."
+#: addon/globalPlugins/nvda_macro_manager.py:829
+msgid "% (Percent sign)"
+msgstr "% (Signo de porcentaje)"
 
-msgid "Geçici makro oynatılıyor..."
-msgstr "Reproduciendo macro temporal..."
+#: addon/globalPlugins/nvda_macro_manager.py:831
+msgid "& (Ampersand)"
+msgstr "& (Ampersand)"
 
-msgid "Kayıt otomatik durduruldu."
-msgstr "Grabación detenida automáticamente."
+#: addon/globalPlugins/nvda_macro_manager.py:812
+msgid "' (Single quote)"
+msgstr "' (Comilla simple)"
 
-msgid "Makroyu Düzenle"
-msgstr "Editar Macro"
+#: addon/globalPlugins/nvda_macro_manager.py:833
+msgid "( (Left parenthesis)"
+msgstr "( (Paréntesis izquierdo)"
 
-msgid "Makro Adı:"
-msgstr "Nombre de la Macro:"
+#: addon/globalPlugins/nvda_macro_manager.py:834
+msgid ") (Right parenthesis)"
+msgstr ") (Paréntesis derecho)"
 
-msgid "Döngü:"
-msgstr "Bucle:"
+#: addon/globalPlugins/nvda_macro_manager.py:832
+msgid "* (Asterisk)"
+msgstr "* (Asterisco)"
 
-msgid "Durdurana kadar çalıştır"
-msgstr "Ejecutar hasta detener"
+#: addon/globalPlugins/nvda_macro_manager.py:816
+msgid "+ (Plus)"
+msgstr "+ (Más)"
 
-msgid "Oynatma Hızı:"
-msgstr "Velocidad de reproducción:"
+#: addon/globalPlugins/nvda_macro_manager.py:805
+msgid ", (Comma)"
+msgstr ", (Coma)"
 
-msgid "0.5x (Yavaş)"
-msgstr "0.5x (Lento)"
+#: addon/globalPlugins/nvda_macro_manager.py:806
+msgid "- (Hyphen / Minus)"
+msgstr "- (Guion / Menos)"
 
-msgid "1x (Orijinal)"
-msgstr "1x (Original)"
+#: addon/globalPlugins/nvda_macro_manager.py:804
+msgid ". (Dot)"
+msgstr ". (Punto)"
 
-msgid "2x (Hızlı)"
-msgstr "2x (Rápido)"
+#: addon/globalPlugins/nvda_macro_manager.py:822
+msgid "/ (Slash)"
+msgstr "/ (Barra)"
 
-msgid "5x (Çok Hızlı)"
-msgstr "5x (Muy rápido)"
+#: addon/globalPlugins/nvda_macro_manager.py:811
+msgid ": (Colon)"
+msgstr ": (Dos puntos)"
 
-msgid "Gecikmesiz"
-msgstr "Sin retraso (Instantáneo)"
+#: addon/globalPlugins/nvda_macro_manager.py:810
+msgid "; (Semicolon)"
+msgstr "; (Punto y coma)"
 
-msgid "Güvenlik:"
-msgstr "Seguridad:"
+#: addon/globalPlugins/nvda_macro_manager.py:808
+msgid "< (Less than)"
+msgstr "< (Menor que)"
 
-msgid "Sadece '{app_name}' uygulamasında çalışsın"
-msgstr "Ejecutar solo en la aplicación '{app_name}'"
+#: addon/globalPlugins/nvda_macro_manager.py:815
+msgid "= (Equals)"
+msgstr "= (Igual)"
 
-msgid "Uygulama kilidi kullanılamaz (Veri yok)"
-msgstr "Bloqueo de aplicación no disponible (Sin datos)"
+#: addon/globalPlugins/nvda_macro_manager.py:809
+msgid "> (Greater than)"
+msgstr "> (Mayor que)"
 
-msgid "Güncelle"
-msgstr "Actualizar"
+#: addon/globalPlugins/nvda_macro_manager.py:824
+msgid "? (Question mark)"
+msgstr "? (Signo de interrogación)"
 
-msgid "İptal"
-msgstr "Cancelar"
+#: addon/globalPlugins/nvda_macro_manager.py:826
+msgid "@ (At sign)"
+msgstr "@ (Arroba)"
 
-msgid "İsimsiz Makro"
-msgstr "Macro sin título"
+#: addon/globalPlugins/nvda_macro_manager.py:817
+msgid "[ (Left square bracket)"
+msgstr "[ (Corchete izquierdo)"
 
-msgid "Kaydedilmiş Makrolar:"
-msgstr "Macros guardadas:"
+#: addon/globalPlugins/nvda_macro_manager.py:821
+msgid "\\ (Backslash)"
+msgstr "\\ (Barra inversa)"
 
-msgid "Henüz makro yok"
-msgstr "Aún no hay macros"
+#: addon/globalPlugins/nvda_macro_manager.py:818
+msgid "] (Right square bracket)"
+msgstr "] (Corchete derecho)"
 
-msgid "Oynat"
-msgstr "Reproducir"
+#: addon/globalPlugins/nvda_macro_manager.py:830
+msgid "^ (Caret)"
+msgstr "^ (Acento circunflejo)"
 
-msgid "Düzenle"
-msgstr "Editar"
+#: addon/globalPlugins/nvda_macro_manager.py:835
+msgid "_ (Underscore)"
+msgstr "_ (Guion bajo)"
 
-msgid "Sil"
-msgstr "Eliminar"
+#: addon/globalPlugins/nvda_macro_manager.py:813
+msgid "` (Grave accent)"
+msgstr "` (Acento grave)"
 
-msgid "İçe Aktar (Import)"
-msgstr "Importar Macro"
+#: addon/globalPlugins/nvda_macro_manager.py:649
+msgid "A macro is already playing."
+msgstr "Ya se está reproduciendo una macro."
 
-msgid "Dışa Aktar (Export)"
-msgstr "Exportar Macro"
+#: addon/globalPlugins/nvda_macro_manager.py:1013
+#: addon/globalPlugins/nvda_macro_manager.py:1070
+#: addon/globalPlugins/nvda_macro_manager.py:1250
+msgid "Add Event"
+msgstr "Añadir evento"
 
-msgid "Yeni Makro İşlemi ({count} Olay Yakalandı):"
-msgstr "Nuevo Proceso de Macro ({count} Eventos Capturados):"
+#: addon/globalPlugins/nvda_macro_manager.py:930
+msgid "Alt"
+msgstr "Alt"
 
-msgid "Yeni Makro"
-msgstr "Nueva Macro"
-
-msgid "Döngü Sayısı:"
-msgstr "Número de bucles:"
-
-msgid "Belirli bir uygulamaya bağla"
-msgstr "Vincular a una aplicación específica"
-
-msgid "Makroyu Veritabanına Kaydet"
-msgstr "Guardar Macro en la Base de Datos"
-
-msgid "Kapat"
-msgstr "Cerrar"
-
-msgid "Makro başarıyla güncellendi."
-msgstr "Macro actualizada correctamente."
-
-msgid "{name} silindi."
-msgstr "{name} eliminada."
-
-msgid "Makroyu Dışa Aktar"
-msgstr "Exportar Macro"
-
-msgid "{name} başarıyla dışa aktarıldı."
-msgstr "{name} exportada correctamente."
-
-msgid "Dışa aktarma başarısız oldu."
-msgstr "Exportación fallida."
-
-msgid "Makroyu İçe Aktar"
-msgstr "Importar Macro"
-
-msgid "{name} makrosu başarıyla içe aktarıldı."
-msgstr "Macro {name} importada correctamente."
-
-msgid "Geçersiz makro dosyası."
-msgstr "Archivo de macro no válido."
-
-msgid "İçe aktarma başarısız oldu."
-msgstr "Importación fallida."
-
-msgid "{name} başarıyla kaydedildi."
-msgstr "{name} guardada correctamente."
-
-msgid "Güvenlik Uyarısı: Makro '{target_app}' için kilitli. Şu anki: '{current_app}'."
-msgstr "Advertencia de seguridad: Macro bloqueada para '{target_app}'. Actual: '{current_app}'."
-
-msgid "Makro oynatımı iptal edildi."
-msgstr "Reproducción de macro cancelada."
-
-msgid "Makro oynatımı tamamlandı."
-msgstr "Reproducción de macro completada."
-
-msgid "Makro kayıt sürecini başlatır veya devam eden kaydı durdurur."
-msgstr "Inicia el proceso de grabación de macro o detiene la grabación en curso."
-
-msgid "Son kaydedilen veya seçili makroyu oynatır. Oynatma sırasındaysa iptal eder."
-msgstr "Reproduce la última macro grabada o seleccionada. Cancela si se está reproduciendo."
-
-msgid "Makro Yöneticisi arayüzünü açar."
-msgstr "Abre la interfaz del Gestor de Macros."
-
-msgid "Makroyu Düzenle (IDE)"
-msgstr "Editar Macro (IDE)"
-
-msgid "Şu anki aktif uygulamaya kilitle"
-msgstr "Bloquear a la aplicación activa actual"
-
-msgid "Makro Olayları (Tuşlar ve Gecikmeler):"
-msgstr "Eventos de Macro (Teclas y Retrasos):"
-
-msgid "Gecikmeyi Düzenle"
-msgstr "Editar Retraso"
-
-msgid "Seçili Olayı Sil"
-msgstr "Eliminar Evento Seleccionado"
-
-msgid "Yukarı Taşı"
-msgstr "Mover Arriba"
-
-msgid "Aşağı Taşı"
-msgstr "Mover Abajo"
-
-msgid "Basıldı"
-msgstr "Pulsada"
-
-msgid "Bırakıldı"
-msgstr "Soltada"
-
-msgid "Gecikme"
-msgstr "Retraso"
-
+#: buildVars.py:17
 msgid ""
-"Yeni gecikme süresini milisaniye (ms) cinsinden girin:\n"
-"(Örnek: 1 saniye için 1000)"
+"An accessible keyboard macro recorder, editor, and playback engine for NVDA.\n"
+"Features include safe recording, a multi-event editor, custom shortcuts, application locks, and speed controls."
 msgstr ""
-"Introduzca el nuevo retraso en milisegundos (ms):\n"
-"(Ejemplo: 1000 para 1 segundo)"
+"Un grabador, editor y motor de reproducción accesible de macros de teclado para NVDA.\n"
+"Incluye grabación segura, editor de varios eventos, atajos personalizados, bloqueos de aplicación y controles de velocidad."
 
-msgid "Gecikme Düzenle"
-msgstr "Editar Retraso"
+#: addon/globalPlugins/nvda_macro_manager.py:932
+msgid "Application key"
+msgstr "Tecla Aplicaciones"
 
-msgid "Gecikme güncellendi."
-msgstr "Retraso actualizado."
-
-msgid "Hata: Sadece rakam giriniz."
-msgstr "Error: Por favor, introduzca solo números."
-
-msgid "Olay silindi."
-msgstr "Evento eliminado."
-
-msgid "Yukarı taşındı."
-msgstr "Movido arriba."
-
-msgid "Aşağı taşındı."
-msgstr "Movido abajo."
-
-msgid "Oynatılıyor: {name}"
-msgstr "Reproduciendo: {name}"
-
-msgid "Makroyu Oynat: {name}"
-msgstr "Reproducir Macro: {name}"
-
-msgid "Makro Yöneticisi - Özel Kısayollar"
-msgstr "Gestor de Macros - Atajos Personalizados"
-
-msgid "Kaydet"
-msgstr "Guardar"
-
-msgid "İçe Aktar"
-msgstr "Importar"
-
-msgid "Dışa Aktar"
-msgstr "Exportar"
-
-msgid "Oynatma Hızı Çarpanı (0 = Gecikmesiz):"
-msgstr "Multiplicador de velocidad (0 = Instantáneo):"
-
-msgid "Oynatma Hızı. Hazır değer seçin veya 1.3 gibi kendi hızınızı yazın. 0 gecikmesizdir."
-msgstr "Velocidad de reproducción. Elija un valor preestablecido o escriba el suyo, como 1.3. 0 es sin retraso."
-
-msgid "Durdurana kadar çalıştır (Sonsuz Döngü)"
-msgstr "Ejecutar hasta detener (Bucle infinito)"
-
-msgid "Uygulama Kilidi Güvenliği"
+#: addon/globalPlugins/nvda_macro_manager.py:1214
+#: addon/globalPlugins/nvda_macro_manager.py:1754
+msgid "Application Lock Security"
 msgstr "Seguridad de bloqueo de aplicación"
 
-msgid "Kaydedilmiş Makrolar Listesi. Çoklu seçim destekler."
-msgstr "Lista de macros guardadas. Soporta selección múltiple."
+#: addon/globalPlugins/nvda_macro_manager.py:921
+msgid "Backspace"
+msgstr "Retroceso"
 
-msgid "Makro Olayları Listesi. Shift ve oklarla çoklu seçim yapabilirsiniz."
-msgstr "Lista de eventos de macro. Puede usar Mayús y las flechas para la selección múltiple."
+#: addon/globalPlugins/nvda_macro_manager.py:976
+#: addon/globalPlugins/nvda_macro_manager.py:1072
+#: addon/globalPlugins/nvda_macro_manager.py:1257
+msgid "Cancel"
+msgstr "Cancelar"
 
-msgid "Geri alındı."
-msgstr "Deshecho."
+#: addon/globalPlugins/nvda_macro_manager.py:170
+msgid ""
+"Cannot enable the application lock because no target application is "
+"available. Record the macro in the target application and try again."
+msgstr ""
+"No se puede activar el bloqueo de aplicación porque no hay ninguna "
+"aplicación de destino disponible. Grabe la macro en la aplicación de destino"
+" e inténtelo de nuevo."
 
-msgid "İleri alındı."
-msgstr "Rehecho."
+#: addon/globalPlugins/nvda_macro_manager.py:641
+msgid "Cannot play this macro because its data is invalid."
+msgstr "No se puede reproducir esta macro porque sus datos no son válidos."
 
-msgid "Bas-Çek"
-msgstr "Pulsar-Soltar"
+#: addon/globalPlugins/nvda_macro_manager.py:933
+msgid "Caps Lock"
+msgstr "Bloq Mayús"
 
-msgid "Bekleme"
-msgstr "Espera"
+#: addon/globalPlugins/nvda_macro_manager.py:1761
+msgid "Close"
+msgstr "Cerrar"
 
-msgid "Basılı Tutma"
-msgstr "Tiempo de retención"
+#: addon/globalPlugins/nvda_macro_manager.py:1683
+msgid "Copy to Clipboard"
+msgstr "Copiar al portapapeles"
 
-msgid "Bekleme Süresi Düzenle"
+#: addon/globalPlugins/nvda_macro_manager.py:1825
+msgid "Could not delete the selected macros. See the NVDA log for details."
+msgstr ""
+"No se pudieron eliminar las macros seleccionadas. Consulte el registro de "
+"NVDA para obtener más información."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1938
+msgid "Could not save the macro. See the NVDA log for details."
+msgstr ""
+"No se pudo guardar la macro. Consulte el registro de NVDA para obtener más "
+"información."
+
+#: addon/globalPlugins/nvda_macro_manager.py:2031
+#: addon/globalPlugins/nvda_macro_manager.py:2045
+msgid "Could not start macro recording. See the NVDA log for details."
+msgstr ""
+"No se pudo iniciar la grabación de la macro. Consulte el registro de NVDA "
+"para obtener más información."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1813
+msgid "Could not update the macro. See the NVDA log for details."
+msgstr ""
+"No se pudo actualizar la macro. Consulte el registro de NVDA para obtener "
+"más información."
+
+#: addon/globalPlugins/nvda_macro_manager.py:929
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2012
+msgid "Custom Macro: {name}"
+msgstr "Macro personalizada: {name}"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1042
+msgid ""
+"Delay in milliseconds (ms):\n"
+"(Example: 1000 for 1 second)"
+msgstr ""
+"Retraso en milisegundos (ms):\n"
+"(Ejemplo: 1000 para 1 segundo)"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1668
+#: addon/globalPlugins/nvda_macro_manager.py:926
+msgid "Delete"
+msgstr "Eliminar"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1238
+msgid "Delete Selected Event"
+msgstr "Eliminar Evento Seleccionado"
+
+#: addon/globalPlugins/nvda_macro_manager.py:910
+msgid "Down Arrow"
+msgstr "Flecha abajo"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1665
+msgid "Edit"
+msgstr "Editar"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1230
+msgid "Edit Delay"
+msgstr "Editar Retraso"
+
+#: addon/globalPlugins/nvda_macro_manager.py:945
+#: addon/globalPlugins/nvda_macro_manager.py:1234
+msgid "Edit Key"
+msgstr "Editar tecla"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1139
+msgid "Edit Macro (IDE)"
+msgstr "Editar macro (IDE)"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1534
+msgid "Edit Wait Time"
 msgstr "Editar tiempo de espera"
 
-msgid "Bekleme süresi güncellendi."
-msgstr "Tiempo de espera actualizado."
+#: addon/globalPlugins/nvda_macro_manager.py:914
+msgid "End"
+msgstr "Fin"
 
+#: addon/globalPlugins/nvda_macro_manager.py:923
+msgid "Enter"
+msgstr "Intro"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1533
 msgid ""
-"Yeni bekleme süresini milisaniye (ms) cinsinden girin:\n"
-"(Örnek: 1 saniye için 1000)"
+"Enter the new wait time in milliseconds (ms):\n"
+"(Example: 1000 for 1 second)"
 msgstr ""
 "Introduzca el nuevo tiempo de espera en milisegundos (ms):\n"
 "(Ejemplo: 1000 para 1 segundo)"
 
-msgid "Seçili olaylar silindi."
-msgstr "Eventos seleccionados eliminados."
+#: addon/globalPlugins/nvda_macro_manager.py:1118
+#: addon/globalPlugins/nvda_macro_manager.py:1552
+msgid "Error: Please enter numbers only."
+msgstr "Error: Por favor, introduzca solo números."
 
-msgid "'{name}' makrosu silindi."
-msgstr "Macro '{name}' eliminada."
+#: addon/globalPlugins/nvda_macro_manager.py:927
+msgid "Escape"
+msgstr "Escape"
 
-msgid "{count} makro silindi."
-msgstr "{count} macros eliminadas."
-
-msgid "'{name}' makrosu başarıyla dışa aktarıldı."
-msgstr "Macro '{name}' exportada correctamente."
-
-msgid "'{name}' makrosu başarıyla içe aktarıldı."
-msgstr "Macro '{name}' importada correctamente."
-
-msgid "'{name}' makrosu başarıyla kaydedildi."
-msgstr "Macro '{name}' guardada correctamente."
-
-msgid "Özel Makro: {name}"
-msgstr "Macro personalizada: {name}"
-
-msgid "Canlı makro kaydı başladı."
-msgstr "Grabación de macro en vivo iniciada."
-
-msgid "Güvenli makro kaydı başladı. Tuşlar gizleniyor."
-msgstr "Grabación de macro segura iniciada. Las teclas están ocultas."
-
-msgid "Canlı makro kaydını başlatır veya durdurur. (Tuşlar sisteme işler)"
-msgstr "Inicia o detiene la grabación de macro en vivo. (Las teclas se procesan en el sistema)"
-
-msgid "Güvenli makro kaydını başlatır. (Tuşlar sistemden gizlenir)"
-msgstr "Inicia la grabación de macro segura. (Las teclas se ocultan al sistema)"
-
-msgid "Edit Macro (IDE)"
-msgstr "Editar macro (IDE)"
-
-msgid "Add Event"
-msgstr "Añadir evento"
-
-msgid "Event Type:"
-msgstr "Tipo de evento:"
-
-msgid "Press (Bas-Çek)"
-msgstr "Presionar tecla"
-
-msgid "Key Down (Tuş Aşağı)"
-msgstr "Tecla hacia abajo"
-
-msgid "Key Up (Tuş Yukarı)"
-msgstr "Tecla hacia arriba"
-
-msgid "Wait"
-msgstr "Esperar"
-
-msgid "Delay in milliseconds (ms):\n(Example: 1000 for 1 second)"
-msgstr "Retraso en milisegundos (ms):\n(Ejemplo: 1000 para 1 segundo)"
-
-msgid "Save Selected Key/Delay"
-msgstr "Guardar selección"
-
+#: addon/globalPlugins/nvda_macro_manager.py:1367
 msgid "Event added."
 msgstr "Evento añadido."
 
+#: addon/globalPlugins/nvda_macro_manager.py:1022
+msgid "Event Type:"
+msgstr "Tipo de evento:"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1855
+msgid "Export failed."
+msgstr "Exportación fallida."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1677
+msgid "Export File"
+msgstr "Exportar archivo"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1842
+msgid "Export Macro"
+msgstr "Exportar Macro"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1896
+msgid "Failed to copy macro to clipboard."
+msgstr "No se pudo copiar la macro al portapapeles."
+
+#: addon/globalPlugins/nvda_macro_manager.py:414
+msgid "Failed to decode macro from clipboard."
+msgstr "No se pudo decodificar la macro del portapapeles."
+
+#: addon/globalPlugins/nvda_macro_manager.py:900
+msgid "Function keys"
+msgstr "Teclas de función"
+
+#: buildVars.py:23
+msgid ""
+"Hardened safe recording, playback cancellation, persistent application locks, and Windows hook handling.\n"
+"Added strict macro validation, bounded imports, atomic database writes, shutdown cleanup, and complete Portuguese, German, Spanish, and Turkish catalogs.\n"
+"Preserved edited key hold durations, made shared macro loop-count edits take effect immediately, and added local regression tests and continuous type checking.\n"
+"Added a per-macro, speed-independent start delay that is preserved when macros are edited or shared."
+msgstr ""
+"Se reforzaron la grabación segura, la cancelación de reproducción, los bloqueos persistentes de aplicación y la gestión de ganchos de Windows.\n"
+"Se añadieron validación estricta de macros, importaciones limitadas, escrituras atómicas de la base de datos, limpieza al cerrar y catálogos completos en portugués, alemán, español y turco.\n"
+"Se conservaron las duraciones editadas de pulsación, las modificaciones del número de repeticiones de macros compartidas se aplican de inmediato y se añadieron pruebas de regresión locales y comprobación continua de tipos.\n"
+"Se añadió un retardo inicial por macro, independiente de la velocidad, que se conserva al editar o compartir macros."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1494
+msgid "hold"
+msgstr "mantener"
+
+#: addon/globalPlugins/nvda_macro_manager.py:913
+msgid "Home"
+msgstr "Inicio"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1883
+msgid "Import failed."
+msgstr "Importación fallida."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1674
+msgid "Import File"
+msgstr "Importar archivo"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1680
+msgid "Import from Clipboard"
+msgstr "Importar desde el portapapeles"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1861
+msgid "Import Macro"
+msgstr "Importar Macro"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1903
+msgid "Imported macro: {name}"
+msgstr "Macro importada: {name}"
+
+#: addon/globalPlugins/nvda_macro_manager.py:925
+msgid "Insert"
+msgstr "Insertar"
+
+#: addon/globalPlugins/nvda_macro_manager.py:411
+msgid "Invalid macro format in clipboard."
+msgstr "Formato de macro no válido en el portapapeles."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1025
+#: addon/globalPlugins/nvda_macro_manager.py:1497
+msgid "Key Down"
+msgstr "Pulsar tecla"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1026
+#: addon/globalPlugins/nvda_macro_manager.py:1500
+msgid "Key Up"
+msgstr "Soltar tecla"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1520
+msgid "Key updated."
+msgstr "Tecla actualizada."
+
+#: addon/globalPlugins/nvda_macro_manager.py:907
+msgid "Left Arrow"
+msgstr "Flecha izquierda"
+
+#: addon/globalPlugins/nvda_macro_manager.py:875
+msgid "Letters"
+msgstr "Letras"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2029
+msgid "Live macro recording started."
+msgstr "Grabación de macro en vivo iniciada."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1751
+#: addon/globalPlugins/nvda_macro_manager.py:1213
+msgid "Lock to current active application"
+msgstr "Bloquear a la aplicación activa actual"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1166
+#: addon/globalPlugins/nvda_macro_manager.py:1710
+msgid "Loop Count"
+msgstr "Número de repeticiones"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1707
+msgid "Loop Count:"
+msgstr "Número de bucles:"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1157
+msgid "Loop:"
+msgstr "Bucle:"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1891
+msgid "Macro '{name}' copied to clipboard."
+msgstr "Macro '{name}' copiada al portapapeles."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1828
+msgid "Macro '{name}' deleted."
+msgstr "Macro '{name}' eliminada."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1852
+msgid "Macro '{name}' exported successfully."
+msgstr "Macro '{name}' exportada correctamente."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1940
+msgid "Macro '{name}' saved successfully."
+msgstr "Macro '{name}' guardada correctamente."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1220
+msgid "Macro Events (Keys and Delays):"
+msgstr "Eventos de Macro (Teclas y Retrasos):"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1224
+msgid ""
+"Macro Events List. You can use Shift and arrow keys for multiple selection."
+msgstr ""
+"Lista de eventos de macro. Puede usar Mayús y las flechas para la selección "
+"múltiple."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1873
+msgid "Macro imported successfully."
+msgstr "Macro importada correctamente."
+
+#: addon/globalPlugins/nvda_macro_manager.py:2023
+#: addon/globalPlugins/nvda_macro_manager.py:2037
+#: addon/globalPlugins/nvda_macro_manager.py:2059
+#: addon/globalPlugins/nvda_macro_manager.py:2075
+#: addon/globalPlugins/nvda_macro_manager.py:1647
+#: addon/globalPlugins/nvda_macro_manager.py:2013
+msgid "Macro Manager"
+msgstr "Gestor de Macros"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1154
+#: addon/globalPlugins/nvda_macro_manager.py:1705
+msgid "Macro Name"
+msgstr "Nombre de la macro"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1152
+#: addon/globalPlugins/nvda_macro_manager.py:1703
+msgid "Macro Name:"
+msgstr "Nombre de la Macro:"
+
+#: addon/globalPlugins/nvda_macro_manager.py:725
+msgid "Macro playback canceled."
+msgstr "Reproducción de macro cancelada."
+
+#: addon/globalPlugins/nvda_macro_manager.py:727
+msgid "Macro playback completed."
+msgstr "Reproducción de macro completada."
+
+#: addon/globalPlugins/nvda_macro_manager.py:716
+#: addon/globalPlugins/nvda_macro_manager.py:740
+msgid "Macro playback failed. See the NVDA log for details."
+msgstr ""
+"La reproducción de la macro falló. Consulte el registro de NVDA para obtener"
+" más información."
+
+#: addon/globalPlugins/nvda_macro_manager.py:680
+#: addon/globalPlugins/nvda_macro_manager.py:698
+msgid ""
+"Macro stopped because the active application changed. Expected: "
+"'{target_app}', current: '{current_app}'."
+msgstr ""
+"La macro se detuvo porque cambió la aplicación activa. Esperada: "
+"'{target_app}', actual: '{current_app}'."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1808
+msgid "Macro updated successfully."
+msgstr "Macro actualizada correctamente."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1246
+msgid "Move Down"
+msgstr "Mover Abajo"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1242
+msgid "Move Up"
+msgstr "Mover Arriba"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1604
+msgid "Moved down."
+msgstr "Movido abajo."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1586
+msgid "Moved up."
+msgstr "Movido arriba."
+
+#: addon/globalPlugins/nvda_macro_manager.py:904
+msgid "Navigation"
+msgstr "Navegación"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1704
+msgid "New Macro"
+msgstr "Nueva Macro"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1693
+msgid "New Macro Process ({count} Events Captured):"
+msgstr "Nuevo Proceso de Macro ({count} Eventos Capturados):"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1656
+#: addon/globalPlugins/nvda_macro_manager.py:1948
+msgid "No macros yet"
+msgstr "Aún no hay macros"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2066
+msgid "No temporary macro to play."
+msgstr "No hay macro temporal para reproducir."
+
+#: addon/globalPlugins/nvda_macro_manager.py:394
+msgid "No valid macro code found in clipboard."
+msgstr "No se encontró ningún código de macro válido en el portapapeles."
+
+#: addon/globalPlugins/nvda_macro_manager.py:934
+msgid "Num Lock"
+msgstr "Bloq Num"
+
+#: addon/globalPlugins/nvda_macro_manager.py:883
+msgid "Numbers"
+msgstr "Números"
+
+#: addon/globalPlugins/nvda_macro_manager.py:887
+msgid "Numpad"
+msgstr "Teclado numérico"
+
+#: addon/globalPlugins/nvda_macro_manager.py:893
+msgid "Numpad Add"
+msgstr "Sumar del teclado numérico"
+
+#: addon/globalPlugins/nvda_macro_manager.py:895
+msgid "Numpad Decimal"
+msgstr "Decimal del teclado numérico"
+
+#: addon/globalPlugins/nvda_macro_manager.py:896
+msgid "Numpad Divide"
+msgstr "Dividir del teclado numérico"
+
+#: addon/globalPlugins/nvda_macro_manager.py:892
+msgid "Numpad Multiply"
+msgstr "Multiplicar del teclado numérico"
+
+#: addon/globalPlugins/nvda_macro_manager.py:894
+msgid "Numpad Subtract"
+msgstr "Restar del teclado numérico"
+
+#: buildVars.py:14
+msgid "NVDA Macro Manager"
+msgstr "Administrador de macros de NVDA"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2074
+msgid "Opens the Macro Manager interface."
+msgstr "Abre la interfaz del Gestor de Macros."
+
+#: addon/globalPlugins/nvda_macro_manager.py:956
+#: addon/globalPlugins/nvda_macro_manager.py:1054
 msgid "Option 1: Auto Capture"
 msgstr "Opción 1: Captura automática"
 
-msgid "Press to Capture"
-msgstr "Pulsar para capturar"
-
+#: addon/globalPlugins/nvda_macro_manager.py:965
+#: addon/globalPlugins/nvda_macro_manager.py:1059
 msgid "Option 2: Select from List"
 msgstr "Opción 2: Seleccionar de la lista"
 
+#: addon/globalPlugins/nvda_macro_manager.py:912
+msgid "Page Down"
+msgstr "Av Pág"
+
+#: addon/globalPlugins/nvda_macro_manager.py:911
+msgid "Page Up"
+msgstr "Re Pág"
+
+#: addon/globalPlugins/nvda_macro_manager.py:936
+msgid "Pause"
+msgstr "Pausa"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1662
+msgid "Play"
+msgstr "Reproducir"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1177
+#: addon/globalPlugins/nvda_macro_manager.py:1718
+msgid "Playback Speed Multiplier (0 = Instant):"
+msgstr "Multiplicador de velocidad (0 = Instantáneo):"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1186
+#: addon/globalPlugins/nvda_macro_manager.py:1726
+msgid ""
+"Playback Speed. Choose a preset or type your own, like 1.3. 0 is instant."
+msgstr ""
+"Velocidad de reproducción. Elija un valor preestablecido o escriba el suyo, "
+"como 1.3. 0 es sin retraso."
+
+#: addon/globalPlugins/nvda_macro_manager.py:2070
+msgid "Playing temporary macro..."
+msgstr "Reproduciendo macro temporal..."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1998
+msgid "Playing: {name}"
+msgstr "Reproduciendo: {name}"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2058
+msgid ""
+"Plays the last recorded (temporary) macro. Cancels if currently playing."
+msgstr ""
+"Reproduce la última macro temporal grabada. Cancela la reproducción si ya "
+"está en curso."
+
+#: addon/globalPlugins/nvda_macro_manager.py:768
+msgid ""
+"Please press the new key on your keyboard...\n"
+"(It will be captured automatically)"
+msgstr ""
+"Pulse la nueva tecla en el teclado...\n"
+"(Se capturará automáticamente)"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1006
+#: addon/globalPlugins/nvda_macro_manager.py:1134
+msgid "Please select a valid key from the list."
+msgstr "Seleccione una tecla válida de la lista."
+
+#: addon/globalPlugins/nvda_macro_manager.py:647
+#: addon/globalPlugins/nvda_macro_manager.py:2068
+msgid "Please stop recording first."
+msgstr "Por favor, detenga la grabación primero."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1024
+#: addon/globalPlugins/nvda_macro_manager.py:1494
+msgid "Press"
+msgstr "Pulsar"
+
+#: addon/globalPlugins/nvda_macro_manager.py:757
+msgid "Press a New Key"
+msgstr "Pulse una tecla nueva"
+
+#: addon/globalPlugins/nvda_macro_manager.py:959
+#: addon/globalPlugins/nvda_macro_manager.py:1055
+msgid "Press to Capture"
+msgstr "Pulsar para capturar"
+
+#: addon/globalPlugins/nvda_macro_manager.py:937
+msgid "Print Screen"
+msgstr "Impr Pant"
+
+#: addon/globalPlugins/nvda_macro_manager.py:880
+msgid "Punctuation"
+msgstr "Puntuación"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2054
+msgid "Recording stopped. {count} events captured."
+msgstr "Grabación detenida. {count} eventos capturados."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1461
+msgid "Redone."
+msgstr "Rehecho."
+
+#: addon/globalPlugins/nvda_macro_manager.py:909
+msgid "Right Arrow"
+msgstr "Flecha derecha"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1749
+#: addon/globalPlugins/nvda_macro_manager.py:1210
+msgid "Run only in '{app_name}' application"
+msgstr "Ejecutar solo en la aplicación '{app_name}'"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1169
+#: addon/globalPlugins/nvda_macro_manager.py:1712
+msgid "Run until stopped"
+msgstr "Ejecutar hasta detener"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1170
+#: addon/globalPlugins/nvda_macro_manager.py:1713
+msgid "Run until stopped (Infinite Loop)"
+msgstr "Ejecutar hasta detener (Bucle infinito)"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2043
+msgid "Safe macro recording started. Keys are hidden."
+msgstr "Grabación de macro segura iniciada. Las teclas están ocultas."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1256
+msgid "Save"
+msgstr "Guardar"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1757
+msgid "Save Macro to Database"
+msgstr "Guardar Macro en la Base de Datos"
+
+#: addon/globalPlugins/nvda_macro_manager.py:974
+msgid "Save Selected Key"
+msgstr "Guardar tecla seleccionada"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1658
+msgid "Saved Macros List. Supports multiple selection."
+msgstr "Lista de macros guardadas. Soporta selección múltiple."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1655
+msgid "Saved Macros:"
+msgstr "Macros guardadas:"
+
+#: addon/globalPlugins/nvda_macro_manager.py:935
+msgid "Scroll Lock"
+msgstr "Bloq Despl"
+
+#: addon/globalPlugins/nvda_macro_manager.py:670
+msgid ""
+"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'."
+msgstr ""
+"Advertencia de seguridad: Macro bloqueada para '{target_app}'. Actual: "
+"'{current_app}'."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1205
+#: addon/globalPlugins/nvda_macro_manager.py:1747
+msgid "Security:"
+msgstr "Seguridad:"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1567
+msgid "Selected events deleted."
+msgstr "Eventos seleccionados eliminados."
+
+#: addon/globalPlugins/nvda_macro_manager.py:1470
 msgid "Selection cleared."
 msgstr "Selección borrada."
 
+#: addon/globalPlugins/nvda_macro_manager.py:928
+msgid "Shift"
+msgstr "Mayús"
+
+#: addon/globalPlugins/nvda_macro_manager.py:924
+msgid "Space"
+msgstr "Espacio"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1190
+#: addon/globalPlugins/nvda_macro_manager.py:1730
+msgid "Start Delay (seconds):"
+msgstr "Retardo inicial (segundos):"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1199
+#: addon/globalPlugins/nvda_macro_manager.py:1742
+msgid ""
+"Start Delay. This wait happens once before playback and is not affected by "
+"playback speed."
+msgstr ""
+"Retardo inicial. Esta espera se aplica una vez antes de la reproducción y no"
+" se ve afectada por la velocidad de reproducción."
+
+#: addon/globalPlugins/nvda_macro_manager.py:2022
+msgid ""
+"Starts or stops live macro recording. (Keys are processed by the system)"
+msgstr ""
+"Inicia o detiene la grabación de macro en vivo. (Las teclas se procesan en "
+"el sistema)"
+
+#: addon/globalPlugins/nvda_macro_manager.py:2036
+msgid "Starts safe macro recording. (Keys are hidden from the system)"
+msgstr ""
+"Inicia la grabación de macro segura. (Las teclas se ocultan al sistema)"
+
+#: addon/globalPlugins/nvda_macro_manager.py:918
+msgid "System and editing"
+msgstr "Sistema y edición"
+
+#: addon/globalPlugins/nvda_macro_manager.py:922
+msgid "Tab"
+msgstr "Tabulador"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1454
+msgid "Undone."
+msgstr "Deshecho."
+
+#: addon/globalPlugins/nvda_macro_manager.py:672
+#: addon/globalPlugins/nvda_macro_manager.py:683
+#: addon/globalPlugins/nvda_macro_manager.py:701
+msgid "unknown"
+msgstr "desconocida"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1924
+#: addon/globalPlugins/nvda_macro_manager.py:1636
+msgid "Untitled Macro"
+msgstr "Macro sin título"
+
+#: addon/globalPlugins/nvda_macro_manager.py:908
+msgid "Up Arrow"
+msgstr "Flecha arriba"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1027
+#: addon/globalPlugins/nvda_macro_manager.py:1490
+msgid "Wait"
+msgstr "Esperar"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1550
+msgid "Wait time updated."
+msgstr "Tiempo de espera actualizado."
+
+#: addon/globalPlugins/nvda_macro_manager.py:931
+msgid "Windows"
+msgstr "Windows"
+
+#: addon/globalPlugins/nvda_macro_manager.py:819
+msgid "{ (Left brace)"
+msgstr "{ (Llave izquierda)"
+
+#: addon/globalPlugins/nvda_macro_manager.py:1303
 msgid "{count} events copied."
 msgstr "{count} eventos copiados."
 
+#: addon/globalPlugins/nvda_macro_manager.py:1328
 msgid "{count} events pasted."
 msgstr "{count} eventos pegados."
 
-msgid "Letters (Harfler)"
-msgstr "Letras"
+#: addon/globalPlugins/nvda_macro_manager.py:1830
+msgid "{count} macros deleted."
+msgstr "{count} macros eliminadas."
 
-msgid "Punctuation (Yazım İşaretleri)"
-msgstr "Signos de puntuación"
+#: addon/globalPlugins/nvda_macro_manager.py:823
+msgid "| (Vertical bar)"
+msgstr "| (Barra vertical)"
 
-msgid "Numbers (Sayılar)"
-msgstr "Números"
+#: addon/globalPlugins/nvda_macro_manager.py:820
+msgid "} (Right brace)"
+msgstr "} (Llave derecha)"
 
-msgid "Function (F) Keys"
-msgstr "Teclas de función"
-
-msgid "Navigation (Yön ve Gezinme)"
-msgstr "Teclas de navegación"
-
-msgid "System & Edit (Sistem)"
-msgstr "Teclas del sistema"
+#: addon/globalPlugins/nvda_macro_manager.py:814
+msgid "~ (Tilde)"
+msgstr "~ (Virgulilla)"
