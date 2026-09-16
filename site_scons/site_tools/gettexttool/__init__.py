@@ -78,7 +78,8 @@ def _generate_pot_with_polib(target, source, env, *, omit_header=False, include_
 			"MIME-Version": "1.0",
 		}
 	for (context, msgid, plural), occurrences in sorted(
-		entries.items(), key=lambda item: item[0][1].casefold()
+		entries.items(),
+		key=lambda item: item[0][1].casefold(),
 	):
 		pot.append(
 			polib.POEntry(

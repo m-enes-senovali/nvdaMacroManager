@@ -290,7 +290,7 @@ class MacroStorage:
 				except MacroValidationError as error:
 					self._database_needs_repair = True
 					logHandler.log.error(
-						f"NVDAMacroManager: Ignoring invalid macro at index {index}: {error}"
+						f"NVDAMacroManager: Ignoring invalid macro at index {index}: {error}",
 					)
 			return valid_macros
 		except Exception as error:
