@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2026-09-17
+
+### Fixed
+- Application-lock target detection now uses NVDA's focused and foreground objects before falling back to the Windows foreground window.
+- The add-on remembers the last focused non-NVDA application, so the target remains available after Macro Manager receives focus.
+- Reopening an existing Macro Manager from another application refreshes the fallback target and its checkbox label.
+
+## [1.2.5] - 2026-09-17
+
+### Fixed
+- Restored add-on interface translations by preserving the translation function installed by NVDA for this add-on instead of replacing it with NVDA's core translation function.
+- Application locks now retain the application that was active before Macro Manager opened, including for legacy and imported macros whose saved data has no recorded-application metadata.
+- Added regression coverage for add-on translation initialization and the edit/save/reload application-lock path with missing legacy metadata.
+
 ## [1.2.4] - 2026-09-17
 
 ### Added

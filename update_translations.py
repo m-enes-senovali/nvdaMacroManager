@@ -62,7 +62,7 @@ TURKISH_TRANSLATIONS = {
 	"Enter": "Enter",
 	"Escape": "Kaçış",
 	"Function keys": "İşlev tuşları",
-	"Hardened safe recording, playback cancellation, persistent application locks, and Windows hook handling.\nAdded strict macro validation, bounded imports, atomic database writes, shutdown cleanup, and complete Portuguese, German, Spanish, and Turkish catalogs.\nPreserved edited key hold durations, made shared macro loop-count edits take effect immediately, and added local regression tests and continuous type checking.\nAdded a per-macro, speed-independent start delay that is preserved when macros are edited or shared.": "Güvenli kayıt, oynatma iptali, kalıcı uygulama kilitleri ve Windows kanca işleme mekanizması sağlamlaştırıldı.\nKatı makro doğrulaması, sınırlı içe aktarma, atomik veritabanı yazımı, kapanış temizliği ile eksiksiz Portekizce, Almanca, İspanyolca ve Türkçe kataloglar eklendi.\nDüzenlenen tuşların basılı tutma süreleri korundu, paylaşılan makrolardaki döngü sayısı düzenlemelerinin hemen geçerli olması sağlandı; yerel gerileme testleri ve sürekli tür denetimi eklendi.\nMakro başına, oynatma hızından bağımsız ve makrolar düzenlendiğinde veya paylaşıldığında korunan bir başlangıç gecikmesi eklendi.",
+	"Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering the last non-NVDA application.\nThe Macro Manager now refreshes the displayed lock target when reopened from an application.": "NVDA'nın odak ve ön plan nesneleri kullanılarak ve NVDA dışındaki son uygulama hatırlanarak uygulama kilidi hedefinin algılanması düzeltildi.\nMakro Yöneticisi bir uygulamadan yeniden açıldığında görüntülenen kilit hedefini artık yeniler.",
 	"Home": "Baş",
 	"hold": "basılı tutma",
 	"Insert": "Ekle",
@@ -113,28 +113,25 @@ TURKISH_TRANSLATIONS = {
 }
 
 CHANGELOG_MSGID = (
-	"Hardened safe recording, playback cancellation, persistent application locks, and Windows hook handling.\n"
-	"Added strict macro validation, bounded imports, atomic database writes, shutdown cleanup, and complete "
-	"Portuguese, German, Spanish, and Turkish catalogs.\n"
-	"Preserved edited key hold durations, made shared macro loop-count edits take effect immediately, and added "
-	"local regression tests and continuous type checking.\n"
-	"Added a per-macro, speed-independent start delay that is preserved when macros are edited or shared."
+	"Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering "
+	"the last non-NVDA application.\n"
+	"The Macro Manager now refreshes the displayed lock target when reopened from an application."
 )
 
 LOCALE_OVERRIDES = {
 	"tr": TURKISH_TRANSLATIONS,
 	"de": {
-		CHANGELOG_MSGID: "Sichere Aufzeichnung, Wiedergabeabbruch, dauerhafte Anwendungssperren und die Verarbeitung von Windows-Hooks wurden gehärtet.\nStrenge Makrovalidierung, begrenzte Importe, atomare Datenbankschreibvorgänge, Bereinigung beim Beenden sowie vollständige portugiesische, deutsche, spanische und türkische Kataloge wurden hinzugefügt.\nBearbeitete Tastenhaltezeiten bleiben erhalten, und Änderungen der Wiederholungsanzahl gemeinsam genutzter Makros werden sofort wirksam; lokale Regressionstests und kontinuierliche Typprüfung wurden ergänzt.\nEine makrospezifische, von der Wiedergabegeschwindigkeit unabhängige Startverzögerung wurde hinzugefügt und bleibt beim Bearbeiten oder Teilen von Makros erhalten.",
+		CHANGELOG_MSGID: "Die Erkennung des Ziels für die Anwendungssperre wurde korrigiert, indem die fokussierten und im Vordergrund befindlichen Objekte von NVDA verwendet und die letzte Nicht-NVDA-Anwendung gespeichert wird.\nDer Makro-Manager aktualisiert nun das angezeigte Sperrziel, wenn er aus einer Anwendung erneut geöffnet wird.",
 		"Start Delay (seconds):": "Startverzögerung (Sekunden):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Startverzögerung. Diese Wartezeit wird einmal vor der Wiedergabe angewendet und nicht von der Wiedergabegeschwindigkeit beeinflusst.",
 	},
 	"es": {
-		CHANGELOG_MSGID: "Se reforzaron la grabación segura, la cancelación de reproducción, los bloqueos persistentes de aplicación y la gestión de ganchos de Windows.\nSe añadieron validación estricta de macros, importaciones limitadas, escrituras atómicas de la base de datos, limpieza al cerrar y catálogos completos en portugués, alemán, español y turco.\nSe conservaron las duraciones editadas de pulsación, las modificaciones del número de repeticiones de macros compartidas se aplican de inmediato y se añadieron pruebas de regresión locales y comprobación continua de tipos.\nSe añadió un retardo inicial por macro, independiente de la velocidad, que se conserva al editar o compartir macros.",
+		CHANGELOG_MSGID: "Se corrigió la detección del destino del bloqueo de aplicación utilizando los objetos enfocado y en primer plano de NVDA y recordando la última aplicación que no sea NVDA.\nEl Administrador de macros ahora actualiza el destino de bloqueo mostrado cuando se vuelve a abrir desde una aplicación.",
 		"Start Delay (seconds):": "Retardo inicial (segundos):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Retardo inicial. Esta espera se aplica una vez antes de la reproducción y no se ve afectada por la velocidad de reproducción.",
 	},
 	"pt_PT": {
-		CHANGELOG_MSGID: "Foram reforçados a gravação segura, o cancelamento da reprodução, os bloqueios persistentes de aplicação e o tratamento de hooks do Windows.\nForam adicionados validação rigorosa de macros, importações limitadas, escritas atómicas na base de dados, limpeza ao encerrar e catálogos completos em português, alemão, espanhol e turco.\nForam preservadas as durações editadas das teclas, as alterações ao número de repetições de macros partilhadas passam a ter efeito imediato e foram adicionados testes de regressão locais e verificação contínua de tipos.\nFoi adicionado um atraso inicial por macro, independente da velocidade, que é preservado ao editar ou partilhar macros.",
+		CHANGELOG_MSGID: "Foi corrigida a deteção do destino do bloqueio de aplicação utilizando os objetos focado e em primeiro plano do NVDA e memorizando a última aplicação que não seja o NVDA.\nO Gestor de Macros atualiza agora o destino de bloqueio apresentado quando é reaberto a partir de uma aplicação.",
 		"Start Delay (seconds):": "Atraso inicial (segundos):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Atraso inicial. Esta espera ocorre uma vez antes da reprodução e não é afetada pela velocidade de reprodução.",
 	},
@@ -180,7 +177,7 @@ def synchronize_locale(
 	new_po.metadata = dict(old_po.metadata)
 	new_po.metadata.update(
 		{
-			"Project-Id-Version": "NVDAMacroManager 1.2.4",
+			"Project-Id-Version": "NVDAMacroManager 1.2.6",
 			"Content-Type": "text/plain; charset=UTF-8",
 			"Content-Transfer-Encoding": "8bit",
 			"Language": language,

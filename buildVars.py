@@ -1,7 +1,12 @@
 # Build customizations
 # Change this file instead of sconstruct or manifest files, whenever possible.
 
-from site_scons.site_tools.NVDATool.typings import AddonInfo, BrailleTables, SymbolDictionaries, SpeechDictionaries
+from site_scons.site_tools.NVDATool.typings import (
+	AddonInfo,
+	BrailleTables,
+	SymbolDictionaries,
+	SpeechDictionaries,
+)
 from site_scons.site_tools.NVDATool.utils import _
 
 # Add-on information variables
@@ -17,13 +22,11 @@ addon_info = AddonInfo(
 	addon_description=_("""An accessible keyboard macro recorder, editor, and playback engine for NVDA.
 Features include safe recording, a multi-event editor, custom shortcuts, application locks, and speed controls."""),
 	# version
-	addon_version="1.2.4",
+	addon_version="1.2.6",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
-	addon_changelog=_("""Hardened safe recording, playback cancellation, persistent application locks, and Windows hook handling.
-Added strict macro validation, bounded imports, atomic database writes, shutdown cleanup, and complete Portuguese, German, Spanish, and Turkish catalogs.
-Preserved edited key hold durations, made shared macro loop-count edits take effect immediately, and added local regression tests and continuous type checking.
-Added a per-macro, speed-independent start delay that is preserved when macros are edited or shared."""),
+	addon_changelog=_("""Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering the last non-NVDA application.
+The Macro Manager now refreshes the displayed lock target when reopened from an application."""),
 	# Author(s)
 	addon_author="Muhammet Enes Senovali <mesenovali@gmail.com>",
 	# URL for the add-on documentation support

@@ -1,5 +1,4 @@
 import base64
-import builtins
 import copy
 import ctypes
 from ctypes import wintypes
@@ -11,7 +10,7 @@ import shutil
 import tempfile
 import threading
 import time
-from typing import Any, Callable
+from typing import Any
 import uuid
 import zlib
 
@@ -28,8 +27,12 @@ import ui
 import winUser
 import wx
 
+
+def _(message: str) -> str:
+	return message
+
+
 addonHandler.initTranslation()
-_: Callable[[str], str] = getattr(builtins, "_")
 
 WH_KEYBOARD_LL = 13
 WM_KEYDOWN = 0x0100
@@ -137,6 +140,30 @@ def get_foreground_app():
 		return None
 
 
+def get_app_name_from_nvda_object(obj):
+	try:
+		return getattr(getattr(obj, "appModule", None), "appName", None)
+	except Exception as error:
+		logHandler.log.debugWarning(f"Failed to get application from NVDA object: {error}")
+		return None
+
+
+def get_active_application():
+	for getter_name in ("getFocusObject", "getForegroundObject"):
+		getter = getattr(api, getter_name, None)
+		if not callable(getter):
+			continue
+		try:
+			app_name = get_app_name_from_nvda_object(getter())
+		except Exception as error:
+			logHandler.log.debugWarning(f"Failed to query NVDA {getter_name}: {error}")
+			continue
+		if is_usable_target_application(app_name):
+			return app_name
+	app_name = get_foreground_app()
+	return app_name if is_usable_target_application(app_name) else None
+
+
 def get_key_name(vk, scan, ext):
 	lparam = scan << 16
 	if ext:
@@ -155,24 +182,29 @@ class MacroStorageError(OSError):
 	pass
 
 
-def get_preferred_lock_app(macro_data):
-	return macro_data.get("target_app") or macro_data.get("recorded_app")
+def is_usable_target_application(app_name):
+	return bool(isinstance(app_name, str) and app_name and app_name.casefold() != "nvda")
+
+
+def get_preferred_lock_app(macro_data, fallback_app=None):
+	for app_name in (macro_data.get("target_app"), macro_data.get("recorded_app"), fallback_app):
+		if is_usable_target_application(app_name):
+			return app_name
+	return None
 
 
 def resolve_target_application(lock_enabled, preferred_app=None):
 	if not lock_enabled:
 		return None
-	if preferred_app:
-		return preferred_app
-	current_app = get_foreground_app()
-	if not current_app or current_app.casefold() == "nvda":
+	target_app = preferred_app if is_usable_target_application(preferred_app) else get_foreground_app()
+	if not is_usable_target_application(target_app):
 		raise MacroValidationError(
 			_(
 				"Cannot enable the application lock because no target application is available. "
 				"Record the macro in the target application and try again.",
 			),
 		)
-	return current_app
+	return target_app
 
 
 class MacroStorage:
@@ -1135,7 +1167,7 @@ class AddEventDialog(wx.Dialog):
 
 
 class MacroEditDialog(wx.Dialog):
-	def __init__(self, parent, macro_data):
+	def __init__(self, parent, macro_data, fallback_app=None):
 		super(MacroEditDialog, self).__init__(parent, title=_("Edit Macro (IDE)"), size=(600, 680))
 		self.macro_data = macro_data
 		original_events = copy.deepcopy(macro_data.get("events", []))
@@ -1203,7 +1235,7 @@ class MacroEditDialog(wx.Dialog):
 		grid_sizer.Add(self.start_delay_combo, 1, wx.EXPAND)
 
 		grid_sizer.Add(wx.StaticText(self, label=_("Security:")), 0, wx.ALIGN_CENTER_VERTICAL)
-		self.lock_app = get_preferred_lock_app(macro_data)
+		self.lock_app = get_preferred_lock_app(macro_data, fallback_app)
 		if self.lock_app:
 			self.app_checkbox = wx.CheckBox(
 				self,
@@ -1643,12 +1675,23 @@ class MacroEditDialog(wx.Dialog):
 
 
 class MacroManagerDialog(wx.Dialog):
-	def __init__(self, parent, engine, storage, events_buffer, recorded_app, clear_buffer_callback):
+	def __init__(
+		self,
+		parent,
+		engine,
+		storage,
+		events_buffer,
+		recorded_app,
+		clear_buffer_callback,
+		active_app=None,
+	):
 		super(MacroManagerDialog, self).__init__(parent, title=_("Macro Manager"), size=(480, 680))
 		self.engine = engine
 		self.storage = storage
 		self.events_buffer = events_buffer
 		self.recorded_app = recorded_app
+		self.active_app = active_app if is_usable_target_application(active_app) else None
+		self.lock_app = get_preferred_lock_app({"recorded_app": recorded_app}, self.active_app)
 		self.clear_buffer_callback = clear_buffer_callback
 
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1746,8 +1789,8 @@ class MacroManagerDialog(wx.Dialog):
 			grid_sizer.Add(self.start_delay_combo, 1, wx.EXPAND)
 			grid_sizer.Add(wx.StaticText(self, label=_("Security:")), 0, wx.ALIGN_CENTER_VERTICAL)
 			app_label = (
-				_("Run only in '{app_name}' application").format(app_name=self.recorded_app)
-				if self.recorded_app
+				_("Run only in '{app_name}' application").format(app_name=self.lock_app)
+				if self.lock_app
 				else _("Lock to current active application")
 			)
 			self.app_checkbox = wx.CheckBox(self, label=app_label)
@@ -1775,6 +1818,17 @@ class MacroManagerDialog(wx.Dialog):
 			self.macro_list.SetSelection(0)
 			self.macro_list.SetFocus()
 
+	def set_active_app(self, active_app):
+		if not is_usable_target_application(active_app):
+			return
+		self.active_app = active_app
+		if not self.recorded_app:
+			self.lock_app = active_app
+			if hasattr(self, "app_checkbox"):
+				self.app_checkbox.SetLabel(
+					_("Run only in '{app_name}' application").format(app_name=self.lock_app),
+				)
+
 	def on_escape_press(self, event):
 		if event.GetKeyCode() == wx.WXK_ESCAPE:
 			self.on_close_click(None)
@@ -1801,7 +1855,7 @@ class MacroManagerDialog(wx.Dialog):
 		sels = list(self.macro_list.GetSelections())
 		if sels and self.storage.macros:
 			macro = self.storage.macros[sels[0]]
-			dlg = MacroEditDialog(self, macro)
+			dlg = MacroEditDialog(self, macro, self.active_app)
 			if dlg.ShowModal() == wx.ID_OK:
 				try:
 					self.storage.update_macro(sels[0], dlg.get_updated_data())
@@ -1923,13 +1977,13 @@ class MacroManagerDialog(wx.Dialog):
 	def on_save_click(self, event):
 		name = self.name_text.GetValue().strip() or _("Untitled Macro")
 		try:
-			final_target = resolve_target_application(self.app_checkbox.GetValue(), self.recorded_app)
+			final_target = resolve_target_application(self.app_checkbox.GetValue(), self.lock_app)
 			self.storage.save_macro(
 				name,
 				0 if self.infinite_check.GetValue() else self.loop_spin.GetValue(),
 				self._parse_speed(),
 				final_target,
-				self.recorded_app,
+				self.recorded_app or self.lock_app,
 				self.events_buffer,
 				self._parse_start_delay(),
 			)
@@ -1963,6 +2017,7 @@ class MacroManagerDialog(wx.Dialog):
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self):
 		super(GlobalPlugin, self).__init__()
+		self.last_external_app = get_active_application()
 		self.engine = MacroEngine(safe_stop_callback=self._stop_recording_and_notify)
 		self.storage = MacroStorage(update_scripts_callback=self.inject_dynamic_scripts)
 		self.gui_instance = None
@@ -2017,6 +2072,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def clear_buffer(self):
 		self.last_recorded_events = []
 		self.last_recorded_app = None
+
+	def event_gainFocus(self, obj, nextHandler):
+		app_name = get_app_name_from_nvda_object(obj)
+		if is_usable_target_application(app_name):
+			self.last_external_app = app_name
+		nextHandler()
 
 	@scriptHandler.script(
 		description=_("Starts or stops live macro recording. (Keys are processed by the system)"),
@@ -2076,11 +2137,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		gesture="kb:nvda+shift+m",
 	)
 	def script_openMacroInterface(self, gesture):
+		active_app = get_active_application() or self.last_external_app
+		if is_usable_target_application(active_app):
+			self.last_external_app = active_app
 		if self.engine.is_recording:
 			self._stop_recording_and_notify()
 		if self.gui_instance:
 			try:
 				if self.gui_instance.IsShown():
+					self.gui_instance.set_active_app(active_app)
 					self.gui_instance.Raise()
 					self.gui_instance.SetFocus()
 					return
@@ -2094,6 +2159,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.last_recorded_events,
 			self.last_recorded_app,
 			self.clear_buffer,
+			active_app,
 		)
 		self.gui_instance.Bind(wx.EVT_WINDOW_DESTROY, self._on_manager_destroyed)
 		self.gui_instance.Show()

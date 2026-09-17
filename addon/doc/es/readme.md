@@ -1,7 +1,7 @@
 # NVDAMacroManager (IDE moderno de macros y motor de automatización)
 
 **Desarrollador:** Muhammet Enes Şenovalı
-**Versión:** 1.2.4
+**Versión:** 1.2.6
 
 NVDA Macro Manager es un grabador, editor y motor de reproducción accesible de macros de teclado integrado con el lector de pantalla NVDA. Está pensado para flujos de trabajo repetibles en los que se conocen la aplicación de destino y la secuencia de teclas grabada.
 

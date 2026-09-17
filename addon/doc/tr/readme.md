@@ -1,7 +1,7 @@
 # NVDAMacroManager (Modern Makro IDE ve Otomasyon Motoru)
 
 **Geliştirici:** Muhammet Enes Şenovalı
-**Sürüm:** 1.2.4
+**Sürüm:** 1.2.6
 
 NVDA Macro Manager, NVDA ekran okuyucusuyla bütünleşen, erişilebilirlik odaklı bir klavye makrosu kayıt, düzenleme ve oynatma motorudur. Hedef uygulamanın ve kaydedilen tuş dizisinin bilindiği tekrarlanabilir masaüstü iş akışları için tasarlanmıştır.
 

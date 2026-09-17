@@ -1,7 +1,7 @@
 # NVDAMacroManager (Moderne Makro-IDE und Automatisierungs-Engine)
 
 **Entwickler:** Muhammet Enes Şenovalı
-**Version:** 1.2.4
+**Version:** 1.2.6
 
 NVDA Macro Manager ist ein barrierefreier Tastaturmakro-Rekorder, Editor und Wiedergabemotor, der in den NVDA-Screenreader integriert ist. Er ist für wiederholbare Desktop-Abläufe vorgesehen, bei denen die Zielanwendung und die aufgezeichnete Tastenfolge bekannt sind.
 

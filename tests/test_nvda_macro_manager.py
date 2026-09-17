@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 import ctypes
 import importlib.util
+import inspect
 import json
 from pathlib import Path
 import re
@@ -46,16 +47,28 @@ def _script(**_kwargs):
 
 def _install_nvda_stubs(config_path: str):
 	messages = []
+	focus_object = types.SimpleNamespace(appModule=types.SimpleNamespace(appName="target"))
 
 	addon_handler = types.ModuleType("addonHandler")
+	addon_handler.translation = lambda message: message
+	builtins._ = lambda message: f"NVDA core: {message}"
 
 	def init_translation():
-		builtins._ = lambda message: message
+		caller_frame = inspect.currentframe().f_back
+		try:
+			caller_frame.f_globals["_"] = addon_handler.translation
+		finally:
+			del caller_frame
 
 	addon_handler.initTranslation = init_translation
 	modules = {
 		"addonHandler": addon_handler,
-		"api": types.SimpleNamespace(copyToClip=lambda _text: True, getClipData=lambda: ""),
+		"api": types.SimpleNamespace(
+			copyToClip=lambda _text: True,
+			getClipData=lambda: "",
+			getFocusObject=lambda: focus_object,
+			getForegroundObject=lambda: focus_object,
+		),
 		"appModuleHandler": types.SimpleNamespace(getAppNameFromProcessID=lambda _pid: "target"),
 		"core": types.SimpleNamespace(callLater=lambda _delay, callback, *args: callback(*args)),
 		"globalPluginHandler": types.SimpleNamespace(GlobalPlugin=_BaseGlobalPlugin),
@@ -133,6 +146,10 @@ class MacroManagerTests(unittest.TestCase):
 
 	def _keyboard_data(self, vk=65, flags=0):
 		return self.module.KBDLLHOOKSTRUCT(vkCode=vk, scanCode=30, flags=flags, time=0, dwExtraInfo=0)
+
+	def test_addon_translation_is_not_overwritten_by_nvda_core_translation(self):
+		self.assertIs(self.stubs["addonHandler"].translation, self.module._)
+		self.assertEqual("Macro Manager", self.module._("Macro Manager"))
 
 	def test_recording_does_not_start_when_hook_installation_fails(self):
 		self.user32.hook = 0
@@ -212,6 +229,32 @@ class MacroManagerTests(unittest.TestCase):
 		self.assertEqual([], self.user32.sent)
 		self.assertTrue(any("Security Warning" in message for message in self.messages))
 
+	def test_active_application_uses_nvda_focus_object_when_win32_reports_nvda(self):
+		self.module.get_foreground_app = lambda: "nvda"
+		focus_object = types.SimpleNamespace(appModule=types.SimpleNamespace(appName="notepad"))
+		self.stubs["api"].getFocusObject = lambda: focus_object
+		self.stubs["api"].getForegroundObject = lambda: None
+
+		self.assertEqual("notepad", self.module.get_active_application())
+
+	def test_global_plugin_remembers_last_non_nvda_focus_application(self):
+		plugin = self.module.GlobalPlugin()
+		next_calls = []
+
+		plugin.event_gainFocus(
+			types.SimpleNamespace(appModule=types.SimpleNamespace(appName="winword")),
+			lambda: next_calls.append(True),
+		)
+		self.assertEqual("winword", plugin.last_external_app)
+		plugin.event_gainFocus(
+			types.SimpleNamespace(appModule=types.SimpleNamespace(appName="nvda")),
+			lambda: next_calls.append(True),
+		)
+
+		self.assertEqual("winword", plugin.last_external_app)
+		self.assertEqual([True, True], next_calls)
+		plugin.terminate()
+
 	def test_editor_application_lock_persists_and_blocks_another_application(self):
 		storage = self.module.MacroStorage()
 		macro = storage.save_macro("Locked", 1, 1.0, None, "winword", [self._event()])
@@ -235,10 +278,25 @@ class MacroManagerTests(unittest.TestCase):
 			thread.join(timeout=1)
 		self.assertEqual([], self.user32.sent)
 
+	def test_editor_application_lock_uses_app_active_before_manager_opened(self):
+		storage = self.module.MacroStorage()
+		macro = storage.save_macro("Legacy", 1, 1.0, None, None, [self._event()])
+
+		preferred_app = self.module.get_preferred_lock_app(macro, "winword")
+		self.assertEqual("winword", preferred_app)
+		target_app = self.module.resolve_target_application(True, preferred_app)
+		self.assertTrue(storage.update_macro(0, {"target_app": target_app}))
+
+		reloaded = self.module.MacroStorage()
+		self.assertEqual("winword", reloaded.macros[0]["target_app"])
+		self.assertEqual("winword", self.module.get_preferred_lock_app(reloaded.macros[0], "notepad"))
+
 	def test_application_lock_is_not_silently_saved_for_nvda(self):
 		self.module.get_foreground_app = lambda: "nvda"
 		with self.assertRaises(self.module.MacroValidationError):
 			self.module.resolve_target_application(True)
+		with self.assertRaises(self.module.MacroValidationError):
+			self.module.resolve_target_application(True, "nvda")
 
 	def test_playback_failure_releases_only_injected_pressed_keys(self):
 		self.module.get_foreground_app = lambda: "target"
