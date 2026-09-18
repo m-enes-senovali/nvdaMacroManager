@@ -48,6 +48,11 @@ def _script(**_kwargs):
 def _install_nvda_stubs(config_path: str):
 	messages = []
 	focus_object = types.SimpleNamespace(appModule=types.SimpleNamespace(appName="target"))
+	app_name_lookups = []
+
+	def get_app_name_from_process_id(process_id):
+		app_name_lookups.append(process_id)
+		return "target" if process_id == 4242 else None
 
 	addon_handler = types.ModuleType("addonHandler")
 	addon_handler.translation = lambda message: message
@@ -69,7 +74,10 @@ def _install_nvda_stubs(config_path: str):
 			getFocusObject=lambda: focus_object,
 			getForegroundObject=lambda: focus_object,
 		),
-		"appModuleHandler": types.SimpleNamespace(getAppNameFromProcessID=lambda _pid: "target"),
+		"appModuleHandler": types.SimpleNamespace(
+			getAppNameFromProcessID=get_app_name_from_process_id,
+			lookups=app_name_lookups,
+		),
 		"core": types.SimpleNamespace(callLater=lambda _delay, callback, *args: callback(*args)),
 		"globalPluginHandler": types.SimpleNamespace(GlobalPlugin=_BaseGlobalPlugin),
 		"globalVars": types.SimpleNamespace(appArgs=types.SimpleNamespace(configPath=config_path)),
@@ -79,7 +87,7 @@ def _install_nvda_stubs(config_path: str):
 		"ui": types.SimpleNamespace(message=messages.append),
 		"winUser": types.SimpleNamespace(
 			getForegroundWindow=lambda: 1,
-			getWindowThreadProcessID=lambda _hwnd: (1, 1),
+			getWindowThreadProcessID=lambda _hwnd: (4242, 7777),
 		),
 	}
 	wx = types.ModuleType("wx")
@@ -150,6 +158,19 @@ class MacroManagerTests(unittest.TestCase):
 	def test_addon_translation_is_not_overwritten_by_nvda_core_translation(self):
 		self.assertIs(self.stubs["addonHandler"].translation, self.module._)
 		self.assertEqual("Macro Manager", self.module._("Macro Manager"))
+
+	def test_foreground_application_lookup_uses_process_id_not_thread_id(self):
+		for app_name in ("audacity", "forge18"):
+			with self.subTest(app_name=app_name):
+				lookups = []
+
+				def lookup(process_id):
+					lookups.append(process_id)
+					return app_name if process_id == 4242 else None
+
+				self.stubs["appModuleHandler"].getAppNameFromProcessID = lookup
+				self.assertEqual(app_name, self.module.get_foreground_app())
+				self.assertEqual([4242], lookups)
 
 	def test_recording_does_not_start_when_hook_installation_fails(self):
 		self.user32.hook = 0
@@ -225,9 +246,43 @@ class MacroManagerTests(unittest.TestCase):
 		self.assertTrue(engine.play_macro([self._event()], target_app="target"))
 		thread = engine._playback_thread
 		if thread:
-			thread.join(timeout=1)
+			thread.join(timeout=3)
 		self.assertEqual([], self.user32.sent)
 		self.assertTrue(any("Security Warning" in message for message in self.messages))
+
+	def test_application_lock_waits_through_transient_unknown_after_manager_closes(self):
+		foreground_apps = iter([None, None, "audacity"])
+
+		def get_foreground_app():
+			return next(foreground_apps, "audacity")
+
+		self.module.get_foreground_app = get_foreground_app
+		engine = self.module.MacroEngine()
+		events = [self._event("keyDown"), self._event("keyUp")]
+		self.assertTrue(engine.play_macro(events, target_app="audacity"))
+		thread = engine._playback_thread
+		assert thread
+		thread.join(timeout=2)
+
+		self.assertFalse(thread.is_alive())
+		self.assertEqual(2, len(self.user32.sent))
+		self.assertIn("Macro playback completed.", self.messages)
+
+	def test_application_lock_stops_if_foreground_changes_during_playback(self):
+		foreground_apps = iter(["audacity", "audacity", "audacity", "audacity", "notepad"])
+		self.module.get_foreground_app = lambda: next(foreground_apps, "notepad")
+		engine = self.module.MacroEngine()
+		events = [self._event("keyDown"), self._event("keyUp")]
+		self.assertTrue(engine.play_macro(events, target_app="audacity"))
+		thread = engine._playback_thread
+		assert thread
+		thread.join(timeout=2)
+
+		self.assertFalse(thread.is_alive())
+		self.assertEqual(2, len(self.user32.sent))
+		self.assertFalse(self.user32.sent[0][1] & self.module.KEYEVENTF_KEYUP)
+		self.assertTrue(self.user32.sent[1][1] & self.module.KEYEVENTF_KEYUP)
+		self.assertTrue(any("active application changed" in message for message in self.messages))
 
 	def test_active_application_uses_nvda_focus_object_when_win32_reports_nvda(self):
 		self.module.get_foreground_app = lambda: "nvda"

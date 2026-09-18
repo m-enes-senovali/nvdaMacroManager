@@ -1,9 +1,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: NVDAMacroManager 1.2.6\n"
+"Project-Id-Version: NVDAMacroManager 1.2.8\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-09-17 07:25+0000\n"
+"PO-Revision-Date: 2026-09-18 06:13+0000\n"
 "Last-Translator: Muhammet Enes Senovali\n"
 "Language-Team: \n"
 "Language: tr\n"
@@ -308,6 +308,14 @@ msgstr "Makro panoya kopyalanamadı."
 #: addon/globalPlugins/nvda_macro_manager.py:446
 msgid "Failed to decode macro from clipboard."
 msgstr "Panodaki makro çözümlenemedi."
+
+#: buildVars.py:28
+msgid ""
+"Fixed foreground-application identification by using the process ID returned by NVDA's window helper instead of the thread ID.\n"
+"Application-locked playback now identifies applications such as Audacity and Sound Forge correctly while retaining fail-closed security checks."
+msgstr ""
+"NVDA'nın pencere yardımcısının döndürdüğü işlem kimliği, iş parçacığı kimliği yerine kullanılarak ön plan uygulamasının belirlenmesi düzeltildi.\n"
+"Uygulama kilitli oynatma artık kapalı kalma ilkesini korurken Audacity ve Sound Forge gibi uygulamaları doğru tanıyor."
 
 #: addon/globalPlugins/nvda_macro_manager.py:932
 msgid "Function keys"
@@ -648,14 +656,6 @@ msgstr "Kayıt durduruldu. {count} olay yakalandı."
 #: addon/globalPlugins/nvda_macro_manager.py:1493
 msgid "Redone."
 msgstr "İleri alındı."
-
-#: buildVars.py:28
-msgid ""
-"Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering the last non-NVDA application.\n"
-"The Macro Manager now refreshes the displayed lock target when reopened from an application."
-msgstr ""
-"NVDA'nın odak ve ön plan nesneleri kullanılarak ve NVDA dışındaki son uygulama hatırlanarak uygulama kilidi hedefinin algılanması düzeltildi.\n"
-"Makro Yöneticisi bir uygulamadan yeniden açıldığında görüntülenen kilit hedefini artık yeniler."
 
 #: addon/globalPlugins/nvda_macro_manager.py:941
 msgid "Right Arrow"

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2026-09-18
+
+### Fixed
+- Foreground-application identification now uses the process ID returned by NVDA's window helper instead of mistakenly using the thread ID.
+- Application-locked playback now identifies applications such as Audacity and Sound Forge correctly while retaining the existing fail-closed security checks.
+
+## [1.2.7] - 2026-09-17
+
+### Fixed
+- Application-locked playback started from Macro Manager now waits through the brief interval in which Windows may report no foreground application while the manager closes.
+- The security check still fails closed if no verifiable non-NVDA foreground application appears, and still refuses playback when another application is active.
+
 ## [1.2.6] - 2026-09-17
 
 ### Fixed

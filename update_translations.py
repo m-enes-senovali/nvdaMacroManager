@@ -62,7 +62,7 @@ TURKISH_TRANSLATIONS = {
 	"Enter": "Enter",
 	"Escape": "Kaçış",
 	"Function keys": "İşlev tuşları",
-	"Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering the last non-NVDA application.\nThe Macro Manager now refreshes the displayed lock target when reopened from an application.": "NVDA'nın odak ve ön plan nesneleri kullanılarak ve NVDA dışındaki son uygulama hatırlanarak uygulama kilidi hedefinin algılanması düzeltildi.\nMakro Yöneticisi bir uygulamadan yeniden açıldığında görüntülenen kilit hedefini artık yeniler.",
+	"Fixed foreground-application identification by using the process ID returned by NVDA's window helper instead of the thread ID.\nApplication-locked playback now identifies applications such as Audacity and Sound Forge correctly while retaining fail-closed security checks.": "NVDA'nın pencere yardımcısının döndürdüğü işlem kimliği, iş parçacığı kimliği yerine kullanılarak ön plan uygulamasının belirlenmesi düzeltildi.\nUygulama kilitli oynatma artık kapalı kalma ilkesini korurken Audacity ve Sound Forge gibi uygulamaları doğru tanıyor.",
 	"Home": "Baş",
 	"hold": "basılı tutma",
 	"Insert": "Ekle",
@@ -113,25 +113,26 @@ TURKISH_TRANSLATIONS = {
 }
 
 CHANGELOG_MSGID = (
-	"Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering "
-	"the last non-NVDA application.\n"
-	"The Macro Manager now refreshes the displayed lock target when reopened from an application."
+	"Fixed foreground-application identification by using the process ID returned by NVDA's window helper "
+	"instead of the thread ID.\n"
+	"Application-locked playback now identifies applications such as Audacity and Sound Forge correctly while "
+	"retaining fail-closed security checks."
 )
 
 LOCALE_OVERRIDES = {
 	"tr": TURKISH_TRANSLATIONS,
 	"de": {
-		CHANGELOG_MSGID: "Die Erkennung des Ziels für die Anwendungssperre wurde korrigiert, indem die fokussierten und im Vordergrund befindlichen Objekte von NVDA verwendet und die letzte Nicht-NVDA-Anwendung gespeichert wird.\nDer Makro-Manager aktualisiert nun das angezeigte Sperrziel, wenn er aus einer Anwendung erneut geöffnet wird.",
+		CHANGELOG_MSGID: "Die Erkennung der Vordergrundanwendung wurde korrigiert, indem die von NVDAs Fensterhilfsfunktion zur\u00fcckgegebene Prozess-ID anstelle der Thread-ID verwendet wird.\nDie an eine Anwendung gebundene Wiedergabe erkennt nun Anwendungen wie Audacity und Sound Forge korrekt, w\u00e4hrend die sicherheitsorientierte Sperrlogik beibehalten wird.",
 		"Start Delay (seconds):": "Startverzögerung (Sekunden):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Startverzögerung. Diese Wartezeit wird einmal vor der Wiedergabe angewendet und nicht von der Wiedergabegeschwindigkeit beeinflusst.",
 	},
 	"es": {
-		CHANGELOG_MSGID: "Se corrigió la detección del destino del bloqueo de aplicación utilizando los objetos enfocado y en primer plano de NVDA y recordando la última aplicación que no sea NVDA.\nEl Administrador de macros ahora actualiza el destino de bloqueo mostrado cuando se vuelve a abrir desde una aplicación.",
+		CHANGELOG_MSGID: "Se corrigió la identificación de la aplicación en primer plano usando el identificador de proceso devuelto por la función auxiliar de ventanas de NVDA en lugar del identificador de hilo.\nLa reproducción bloqueada a una aplicación ahora identifica correctamente programas como Audacity y Sound Forge, manteniendo las comprobaciones de seguridad que bloquean ante cualquier duda.",
 		"Start Delay (seconds):": "Retardo inicial (segundos):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Retardo inicial. Esta espera se aplica una vez antes de la reproducción y no se ve afectada por la velocidad de reproducción.",
 	},
 	"pt_PT": {
-		CHANGELOG_MSGID: "Foi corrigida a deteção do destino do bloqueio de aplicação utilizando os objetos focado e em primeiro plano do NVDA e memorizando a última aplicação que não seja o NVDA.\nO Gestor de Macros atualiza agora o destino de bloqueio apresentado quando é reaberto a partir de uma aplicação.",
+		CHANGELOG_MSGID: "Foi corrigida a identificação da aplicação em primeiro plano, utilizando o identificador do processo devolvido pela função auxiliar de janelas do NVDA em vez do identificador da thread.\nA reprodução bloqueada a uma aplicação identifica agora corretamente programas como o Audacity e o Sound Forge, mantendo as verificações de segurança que bloqueiam em caso de dúvida.",
 		"Start Delay (seconds):": "Atraso inicial (segundos):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Atraso inicial. Esta espera ocorre uma vez antes da reprodução e não é afetada pela velocidade de reprodução.",
 	},
@@ -177,7 +178,7 @@ def synchronize_locale(
 	new_po.metadata = dict(old_po.metadata)
 	new_po.metadata.update(
 		{
-			"Project-Id-Version": "NVDAMacroManager 1.2.6",
+			"Project-Id-Version": "NVDAMacroManager 1.2.8",
 			"Content-Type": "text/plain; charset=UTF-8",
 			"Content-Transfer-Encoding": "8bit",
 			"Language": language,

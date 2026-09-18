@@ -22,11 +22,11 @@ addon_info = AddonInfo(
 	addon_description=_("""An accessible keyboard macro recorder, editor, and playback engine for NVDA.
 Features include safe recording, a multi-event editor, custom shortcuts, application locks, and speed controls."""),
 	# version
-	addon_version="1.2.6",
+	addon_version="1.2.8",
 	# Brief changelog for this version
 	# Translators: what's new content for the add-on version to be shown in the add-on store
-	addon_changelog=_("""Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering the last non-NVDA application.
-The Macro Manager now refreshes the displayed lock target when reopened from an application."""),
+	addon_changelog=_("""Fixed foreground-application identification by using the process ID returned by NVDA's window helper instead of the thread ID.
+Application-locked playback now identifies applications such as Audacity and Sound Forge correctly while retaining fail-closed security checks."""),
 	# Author(s)
 	addon_author="Muhammet Enes Senovali <mesenovali@gmail.com>",
 	# URL for the add-on documentation support

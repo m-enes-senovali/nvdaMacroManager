@@ -1,9 +1,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: NVDAMacroManager 1.2.6\n"
+"Project-Id-Version: NVDAMacroManager 1.2.8\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-09-17 07:25+0000\n"
+"PO-Revision-Date: 2026-09-18 06:13+0000\n"
 "Last-Translator: \n"
 "Language-Team: Muhammet Enes Senovali\n"
 "Language: es\n"
@@ -317,6 +317,14 @@ msgstr "No se pudo copiar la macro al portapapeles."
 #: addon/globalPlugins/nvda_macro_manager.py:446
 msgid "Failed to decode macro from clipboard."
 msgstr "No se pudo decodificar la macro del portapapeles."
+
+#: buildVars.py:28
+msgid ""
+"Fixed foreground-application identification by using the process ID returned by NVDA's window helper instead of the thread ID.\n"
+"Application-locked playback now identifies applications such as Audacity and Sound Forge correctly while retaining fail-closed security checks."
+msgstr ""
+"Se corrigió la identificación de la aplicación en primer plano usando el identificador de proceso devuelto por la función auxiliar de ventanas de NVDA en lugar del identificador de hilo.\n"
+"La reproducción bloqueada a una aplicación ahora identifica correctamente programas como Audacity y Sound Forge, manteniendo las comprobaciones de seguridad que bloquean ante cualquier duda."
 
 #: addon/globalPlugins/nvda_macro_manager.py:932
 msgid "Function keys"
@@ -662,14 +670,6 @@ msgstr "Grabación detenida. {count} eventos capturados."
 #: addon/globalPlugins/nvda_macro_manager.py:1493
 msgid "Redone."
 msgstr "Rehecho."
-
-#: buildVars.py:28
-msgid ""
-"Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering the last non-NVDA application.\n"
-"The Macro Manager now refreshes the displayed lock target when reopened from an application."
-msgstr ""
-"Se corrigió la detección del destino del bloqueo de aplicación utilizando los objetos enfocado y en primer plano de NVDA y recordando la última aplicación que no sea NVDA.\n"
-"El Administrador de macros ahora actualiza el destino de bloqueo mostrado cuando se vuelve a abrir desde una aplicación."
 
 #: addon/globalPlugins/nvda_macro_manager.py:941
 msgid "Right Arrow"

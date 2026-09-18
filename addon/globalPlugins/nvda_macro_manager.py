@@ -133,7 +133,7 @@ def get_foreground_app():
 		hwnd = winUser.getForegroundWindow()
 		if not hwnd:
 			return None
-		threadID, processID = winUser.getWindowThreadProcessID(hwnd)
+		processID, _threadID = winUser.getWindowThreadProcessID(hwnd)
 		return appModuleHandler.getAppNameFromProcessID(processID)
 	except Exception as e:
 		logHandler.log.debugWarning(f"Failed to get foreground app: {e}")
@@ -693,7 +693,7 @@ class MacroEngine:
 					if self.stop_playback_event.is_set():
 						break
 					current_app = get_foreground_app()
-					if not current_app or current_app.casefold() != "nvda":
+					if is_usable_target_application(current_app):
 						break
 					self.stop_playback_event.wait(0.05)
 

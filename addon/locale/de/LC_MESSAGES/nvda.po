@@ -1,9 +1,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: NVDAMacroManager 1.2.6\n"
+"Project-Id-Version: NVDAMacroManager 1.2.8\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-09-17 07:25+0000\n"
+"PO-Revision-Date: 2026-09-18 06:13+0000\n"
 "Last-Translator: \n"
 "Language-Team: Muhammet Enes Senovali\n"
 "Language: de\n"
@@ -318,6 +318,14 @@ msgstr "Das Makro konnte nicht in die Zwischenablage kopiert werden."
 #: addon/globalPlugins/nvda_macro_manager.py:446
 msgid "Failed to decode macro from clipboard."
 msgstr "Das Makro aus der Zwischenablage konnte nicht dekodiert werden."
+
+#: buildVars.py:28
+msgid ""
+"Fixed foreground-application identification by using the process ID returned by NVDA's window helper instead of the thread ID.\n"
+"Application-locked playback now identifies applications such as Audacity and Sound Forge correctly while retaining fail-closed security checks."
+msgstr ""
+"Die Erkennung der Vordergrundanwendung wurde korrigiert, indem die von NVDAs Fensterhilfsfunktion zurückgegebene Prozess-ID anstelle der Thread-ID verwendet wird.\n"
+"Die an eine Anwendung gebundene Wiedergabe erkennt nun Anwendungen wie Audacity und Sound Forge korrekt, während die sicherheitsorientierte Sperrlogik beibehalten wird."
 
 #: addon/globalPlugins/nvda_macro_manager.py:932
 msgid "Function keys"
@@ -663,14 +671,6 @@ msgstr "Aufzeichnung gestoppt. {count} Ereignisse erfasst."
 #: addon/globalPlugins/nvda_macro_manager.py:1493
 msgid "Redone."
 msgstr "Wiederhergestellt."
-
-#: buildVars.py:28
-msgid ""
-"Resolved application-lock target detection by using NVDA's focused and foreground objects and remembering the last non-NVDA application.\n"
-"The Macro Manager now refreshes the displayed lock target when reopened from an application."
-msgstr ""
-"Die Erkennung des Ziels für die Anwendungssperre wurde korrigiert, indem die fokussierten und im Vordergrund befindlichen Objekte von NVDA verwendet und die letzte Nicht-NVDA-Anwendung gespeichert wird.\n"
-"Der Makro-Manager aktualisiert nun das angezeigte Sperrziel, wenn er aus einer Anwendung erneut geöffnet wird."
 
 #: addon/globalPlugins/nvda_macro_manager.py:941
 msgid "Right Arrow"
