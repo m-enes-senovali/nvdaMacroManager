@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2026-10-08
+
+### Fixed
+- Filter duplicate modifier downs while preserving letter and space repeats; ignore held start-shortcut repeats and initial key releases.
+- Remove only recognized recorder control chords when stopping, preserve real events and the elapsed duration of keys still held.
+- Recognize configured NVDA recording and manager keyboard gestures in safe mode without forwarding their keys to applications.
+- Display holds longer than 200 ms as Key Down, Wait, Key Up. Short presses retain their recorded duration; new presses use 35 ms without a separate hold-time label.
+- Preserve standalone and trailing waits through editing, storage, clipboard sharing and playback.
+- Wait for physically held playback-trigger keys to be released; never send unmatched macro key-up events.
+- Match scan-code and virtual-code key identities, use extended scan-code input flags, release macro-held keys between loops and retry failed cleanup releases.
+- Check application locks during long waits, reject unknown unlocked foreground applications and reset motor state after worker creation failures.
+- Scope editing shortcuts to the event list, preserve text-field keyboard operations and use the list caret for Ctrl+Space selection.
+- Keep the manager open when playback cannot start and reopen the editor with its changes after a failed save.
+- Reject malformed event actions, overflowed timings and invalid millisecond values; report shortcut playback startup failures.
+- Preserve legacy macro shortcut IDs while avoiding generated-script name collisions.
+
+### Compatibility
+- Based on upstream v1.2.8 (fa29441), retaining clipboard sharing, per-macro start delay, application-target fallback, atomic database backups, current-data dynamic shortcuts and all four translated interfaces.
+
 ## [1.2.8] - 2026-09-18
 
 ### Fixed

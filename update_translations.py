@@ -113,26 +113,27 @@ TURKISH_TRANSLATIONS = {
 }
 
 CHANGELOG_MSGID = (
-	"Fixed foreground-application identification by using the process ID returned by NVDA's window helper "
-	"instead of the thread ID.\n"
-	"Application-locked playback now identifies applications such as Audacity and Sound Forge correctly while "
-	"retaining fail-closed security checks."
+	"Fixed repeated modifier recordings, preserved long key holds and trailing waits, "
+	"and improved safe recording and playback cleanup."
+)
+TURKISH_TRANSLATIONS[CHANGELOG_MSGID] = (
+	"Yinelenen değiştirici kayıtları düzeltildi, uzun basışlar ve sondaki beklemeler korundu; güvenli kayıt ve oynatma sonrası tuş temizliği iyileştirildi."
 )
 
 LOCALE_OVERRIDES = {
 	"tr": TURKISH_TRANSLATIONS,
 	"de": {
-		CHANGELOG_MSGID: "Die Erkennung der Vordergrundanwendung wurde korrigiert, indem die von NVDAs Fensterhilfsfunktion zur\u00fcckgegebene Prozess-ID anstelle der Thread-ID verwendet wird.\nDie an eine Anwendung gebundene Wiedergabe erkennt nun Anwendungen wie Audacity und Sound Forge korrekt, w\u00e4hrend die sicherheitsorientierte Sperrlogik beibehalten wird.",
+		CHANGELOG_MSGID: "Wiederholte Aufzeichnungen von Modifikatortasten wurden korrigiert, lange Tastendrücke und abschließende Wartezeiten bleiben erhalten. Sichere Aufzeichnung und das Freigeben von Tasten nach der Wiedergabe wurden verbessert.",
 		"Start Delay (seconds):": "Startverzögerung (Sekunden):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Startverzögerung. Diese Wartezeit wird einmal vor der Wiedergabe angewendet und nicht von der Wiedergabegeschwindigkeit beeinflusst.",
 	},
 	"es": {
-		CHANGELOG_MSGID: "Se corrigió la identificación de la aplicación en primer plano usando el identificador de proceso devuelto por la función auxiliar de ventanas de NVDA en lugar del identificador de hilo.\nLa reproducción bloqueada a una aplicación ahora identifica correctamente programas como Audacity y Sound Forge, manteniendo las comprobaciones de seguridad que bloquean ante cualquier duda.",
+		CHANGELOG_MSGID: "Se corrigieron las grabaciones repetidas de modificadores, se conservaron las pulsaciones largas y las esperas finales, y se mejoraron la grabación segura y la liberación de teclas después de la reproducción.",
 		"Start Delay (seconds):": "Retardo inicial (segundos):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Retardo inicial. Esta espera se aplica una vez antes de la reproducción y no se ve afectada por la velocidad de reproducción.",
 	},
 	"pt_PT": {
-		CHANGELOG_MSGID: "Foi corrigida a identificação da aplicação em primeiro plano, utilizando o identificador do processo devolvido pela função auxiliar de janelas do NVDA em vez do identificador da thread.\nA reprodução bloqueada a uma aplicação identifica agora corretamente programas como o Audacity e o Sound Forge, mantendo as verificações de segurança que bloqueiam em caso de dúvida.",
+		CHANGELOG_MSGID: "Foram corrigidas as gravações repetidas de modificadores, preservadas as pressões longas e as esperas finais, e melhoradas a gravação segura e a libertação de teclas após a reprodução.",
 		"Start Delay (seconds):": "Atraso inicial (segundos):",
 		"Start Delay. This wait happens once before playback and is not affected by playback speed.": "Atraso inicial. Esta espera ocorre uma vez antes da reprodução e não é afetada pela velocidade de reprodução.",
 	},
@@ -178,7 +179,7 @@ def synchronize_locale(
 	new_po.metadata = dict(old_po.metadata)
 	new_po.metadata.update(
 		{
-			"Project-Id-Version": "NVDAMacroManager 1.2.8",
+			"Project-Id-Version": "NVDAMacroManager 1.2.9",
 			"Content-Type": "text/plain; charset=UTF-8",
 			"Content-Transfer-Encoding": "8bit",
 			"Language": language,

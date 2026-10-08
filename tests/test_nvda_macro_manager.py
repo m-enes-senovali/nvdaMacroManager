@@ -79,6 +79,11 @@ def _install_nvda_stubs(config_path: str):
 			lookups=app_name_lookups,
 		),
 		"core": types.SimpleNamespace(callLater=lambda _delay, callback, *args: callback(*args)),
+		"config": types.SimpleNamespace(
+			conf={"keyboard": {"NVDAModifierKeys": 6, "keyboardLayout": "desktop"}}
+		),
+		"keyboardHandler": types.SimpleNamespace(currentModifiers=set()),
+		"inputCore": types.SimpleNamespace(),
 		"globalPluginHandler": types.SimpleNamespace(GlobalPlugin=_BaseGlobalPlugin),
 		"globalVars": types.SimpleNamespace(appArgs=types.SimpleNamespace(configPath=config_path)),
 		"gui": types.SimpleNamespace(mainFrame=types.SimpleNamespace()),
@@ -114,6 +119,7 @@ class _FakeUser32:
 		self.hook = hook
 		self.async_keys = set()
 		self.sent = []
+		self.raw_sent = []
 		self.unhooked = []
 		self.fail_send_number = None
 		self.send_calls = 0
@@ -131,18 +137,25 @@ class _FakeUser32:
 	def GetAsyncKeyState(self, key):
 		return 0x8000 if key in self.async_keys else 0
 
+	def MapVirtualKeyW(self, key, _mode):
+		return {32: 57, 65: 30, 66: 48, 160: 42, 161: 54, 162: 29, 163: 29}.get(key, key)
+
 	def SendInput(self, _count, pointer, _size):
 		self.send_calls += 1
 		if self.send_calls == self.fail_send_number:
 			return 0
 		value = ctypes.cast(pointer, ctypes.POINTER(self.input_type)).contents
-		self.sent.append((value.ii.ki.wVk, value.ii.ki.dwFlags))
+		vk, scan, flags = value.ii.ki.wVk, value.ii.ki.wScan, value.ii.ki.dwFlags
+		self.raw_sent.append((vk, scan, flags))
+		if flags & 8:
+			vk = {30: 65, 48: 66, 57: 32, 29: 163 if flags & 1 else 162}.get(scan, scan)
+		self.sent.append((vk, flags))
 		return 1
 
 
 class MacroManagerTests(unittest.TestCase):
 	def setUp(self):
-		self.temp_dir = tempfile.TemporaryDirectory()
+		self.temp_dir = tempfile.TemporaryDirectory(dir=ROOT)
 		self.addCleanup(self.temp_dir.cleanup)
 		self.module, self.stubs, self.messages = _load_addon(self.temp_dir.name)
 		self.user32 = _FakeUser32()
@@ -193,7 +206,9 @@ class MacroManagerTests(unittest.TestCase):
 		self.assertEqual(1, result)
 		self.assertEqual(1, len(engine.events))
 
-		self.user32.async_keys = {45, 16, 91}
+		for vk in (45, 160, 91):
+			modifier = self._keyboard_data(vk=vk)
+			engine.low_level_keyboard_handler(0, self.module.WM_KEYDOWN, ctypes.addressof(modifier))
 		stop_key = self._keyboard_data(vk=self.module.VK_R)
 		result = engine.low_level_keyboard_handler(
 			0,
@@ -210,27 +225,35 @@ class MacroManagerTests(unittest.TestCase):
 		result = engine.low_level_keyboard_handler(0, self.module.WM_KEYDOWN, ctypes.addressof(data))
 		self.assertEqual(77, result)
 
-	def test_recording_stop_gesture_and_extra_ctrl_are_not_saved(self):
+	def test_recording_stop_gesture_keeps_previous_ctrl_action(self):
 		engine = self.module.MacroEngine()
 		self.assertTrue(engine.start_recording(safe_mode=False))
-		engine.events = [
+		events_to_record = [
 			self._event("keyDown", vk=65, delay=0.0),
 			self._event("keyUp", vk=65, delay=0.1),
 			self._event("keyDown", vk=162, delay=0.05),
+			self._event("keyUp", vk=162, delay=0.01),
 			self._event("keyDown", vk=45, delay=0.01),
 			self._event("keyDown", vk=91, delay=0.01),
 			self._event("keyDown", vk=self.module.VK_R, delay=0.01),
 		]
+		for event in events_to_record:
+			data = self._keyboard_data(vk=event["vkCode"])
+			message = self.module.WM_KEYDOWN if event["action"] == "keyDown" else self.module.WM_KEYUP
+			engine.low_level_keyboard_handler(0, message, ctypes.addressof(data))
 
 		events, _recorded_app = engine.stop_recording()
 
-		self.assertEqual([(65, "keyDown"), (65, "keyUp")], [(e["vkCode"], e["action"]) for e in events])
+		self.assertEqual(
+			[(65, "keyDown"), (65, "keyUp"), (162, "keyDown"), (162, "keyUp")],
+			[(e["vkCode"], e["action"]) for e in events],
+		)
 		self.assertEqual([123], self.user32.unhooked)
 
 	def test_playback_is_single_instance_and_reports_completion(self):
 		self.module.get_foreground_app = lambda: "target"
 		engine = self.module.MacroEngine()
-		events = [self._event("keyDown"), self._event("keyUp")]
+		events = [self._event("keyDown"), self._event("keyUp", delay=0.1)]
 		self.assertTrue(engine.play_macro(events, target_app="target"))
 		self.assertFalse(engine.play_macro(events, target_app="target"))
 		thread = engine._playback_thread
@@ -269,8 +292,7 @@ class MacroManagerTests(unittest.TestCase):
 		self.assertIn("Macro playback completed.", self.messages)
 
 	def test_application_lock_stops_if_foreground_changes_during_playback(self):
-		foreground_apps = iter(["audacity", "audacity", "audacity", "audacity", "notepad"])
-		self.module.get_foreground_app = lambda: next(foreground_apps, "notepad")
+		self.module.get_foreground_app = lambda: "notepad" if self.user32.sent else "audacity"
 		engine = self.module.MacroEngine()
 		events = [self._event("keyDown"), self._event("keyUp")]
 		self.assertTrue(engine.play_macro(events, target_app="audacity"))
@@ -380,6 +402,7 @@ class MacroManagerTests(unittest.TestCase):
 		engine._send_key_event = send_and_signal
 		events = [self._event("keyDown"), self._event("keyUp", delay=10.0)]
 		self.assertTrue(engine.play_macro(events))
+		self.user32.async_keys.clear()
 		self.assertTrue(first_event_sent.wait(timeout=1.0))
 		engine.stop_playback_event.set()
 		thread = engine._playback_thread
@@ -396,6 +419,7 @@ class MacroManagerTests(unittest.TestCase):
 		self.module.get_foreground_app = lambda: "target"
 		engine = self.module.MacroEngine()
 		waits = []
+		clock = [0.0]
 		start_wait_seen = threading.Event()
 		release_start_wait = threading.Event()
 
@@ -404,9 +428,13 @@ class MacroManagerTests(unittest.TestCase):
 			if timeout == 0.75:
 				start_wait_seen.set()
 				release_start_wait.wait(timeout=1.0)
+			clock[0] += timeout
 			return False
 
-		with mock.patch.object(engine.stop_playback_event, "wait", side_effect=record_wait):
+		with (
+			mock.patch.object(engine.stop_playback_event, "wait", side_effect=record_wait),
+			mock.patch.object(self.module.time, "perf_counter", side_effect=lambda: clock[0]),
+		):
 			self.assertTrue(
 				engine.play_macro(
 					[self._event("keyDown", delay=1.0), self._event("keyUp", delay=1.0)],
@@ -422,7 +450,7 @@ class MacroManagerTests(unittest.TestCase):
 
 		self.assertFalse(thread.is_alive())
 		self.assertEqual(0.75, waits[0])
-		self.assertEqual(2, waits.count(0.25))
+		self.assertAlmostEqual(0.5, sum(waits[1:]))
 
 	def test_start_delay_can_be_canceled_before_any_key_is_sent(self):
 		self.module.get_foreground_app = lambda: "target"
@@ -558,7 +586,8 @@ class MacroManagerTests(unittest.TestCase):
 		dialog = object()
 		raw = [self._event("keyDown", delay=0.25), self._event("keyUp", delay=0.42)]
 		linear = self.module.MacroEditDialog._linearize_events(dialog, raw)
-		self.assertEqual(0.42, linear[1]["hold"])
+		self.assertEqual(["delay", "keyDown", "delay", "keyUp"], [event["type"] for event in linear])
+		self.assertEqual(0.42, linear[2]["delay"])
 		rebuilt = self.module.MacroEditDialog._rebuild_events(dialog, linear)
 		self.assertEqual(0.25, rebuilt[0]["delay"])
 		self.assertEqual(0.42, rebuilt[1]["delay"])

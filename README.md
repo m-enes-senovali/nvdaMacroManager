@@ -1,7 +1,9 @@
 # NVDAMacroManager (Modern Macro IDE & Automation Engine)
 
 **Developer:** Muhammet Enes Şenovalı
-**Version:** 1.2.8
+**Version:** 1.2.9
+
+In 1.2.9, newly added Press steps use a standard 35 ms duration without a separate hold-time field. Recorded short presses keep their original duration; holds longer than 200 ms appear as Key Down, Wait, Key Up. Trailing waits are saved too. Recorder commands assigned in NVDA Input Gestures work in safe mode. Playback waits up to two seconds for held trigger keys to be released before applying the macro's speed-independent start delay.
 
 NVDA Macro Manager is an accessibility-focused keyboard macro recorder, editor, and playback engine integrated with the NVDA screen reader. It is intended for repeatable desktop workflows where the target application and recorded key sequence are known.
 

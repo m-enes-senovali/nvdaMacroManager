@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import copy
 import ctypes
 from ctypes import wintypes
@@ -18,6 +19,9 @@ import addonHandler
 import api
 import appModuleHandler
 import core
+import config
+import inputCore
+import keyboardHandler
 import globalPluginHandler
 import globalVars
 import gui
@@ -42,6 +46,10 @@ WM_SYSKEYUP = 0x0105
 INPUT_KEYBOARD = 1
 KEYEVENTF_EXTENDEDKEY = 0x0001
 KEYEVENTF_KEYUP = 0x0002
+KEYEVENTF_SCANCODE = 0x0008
+MODIFIER_KEYS = {16, 17, 18, 91, 92, 160, 161, 162, 163, 164, 165}
+STANDARD_PRESS_TIME = 0.035
+SHORT_PRESS_LIMIT = 0.2
 LLKHF_EXTENDED = 0x01
 LLKHF_INJECTED = 0x10
 VK_R = 0x52
@@ -126,6 +134,8 @@ user32.CallNextHookEx.argtypes = (HHOOK, ctypes.c_int, wintypes.WPARAM, wintypes
 user32.CallNextHookEx.restype = LRESULT
 user32.SendInput.argtypes = (wintypes.UINT, ctypes.POINTER(Input), ctypes.c_int)
 user32.SendInput.restype = wintypes.UINT
+user32.SendMessageW.argtypes = (wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+user32.SendMessageW.restype = ctypes.c_ssize_t
 
 
 def get_foreground_app():
@@ -172,6 +182,31 @@ def get_key_name(vk, scan, ext):
 	if user32.GetKeyNameTextW(lparam, buf, 64):
 		return buf.value
 	return f"VK_{vk}"
+
+
+def key_metadata(vk):
+	scan = user32.MapVirtualKeyW(vk, 0)
+	extended = vk in {33, 34, 35, 36, 37, 38, 39, 40, 45, 46, 91, 92, 93, 111, 144, 163, 165}
+	return scan, extended
+
+
+def parse_milliseconds(value):
+	try:
+		if not value or not value.isdecimal():
+			raise ValueError()
+		delay = int(value) / 1000.0
+		if not math.isfinite(delay) or delay > MAX_EVENT_DELAY_SECONDS:
+			raise ValueError()
+		return delay
+	except (ValueError, OverflowError):
+		raise ValueError(_("Error: Please enter numbers only."))
+
+
+def macro_script_id(identifier):
+	# Preserve existing UUID/time-based shortcut names, avoid dot/underscore collisions.
+	if re.fullmatch(r"[A-Za-z0-9]+|[0-9]+\.[0-9]+", identifier):
+		return identifier.replace(".", "_")
+	return "id_" + hashlib.sha256(identifier.encode("utf-8")).hexdigest()
 
 
 class MacroValidationError(ValueError):
@@ -233,20 +268,29 @@ class MacroStorage:
 		if not isinstance(event, dict):
 			raise MacroValidationError("Each macro event must be an object")
 		action = event.get("action")
-		if action not in {"keyDown", "keyUp"}:
-			raise MacroValidationError("Event action must be keyDown or keyUp")
+		if not isinstance(action, str) or action not in {"keyDown", "keyUp", "delay"}:
+			raise MacroValidationError("Invalid event action")
 		vk_code = event.get("vkCode")
 		scan_code = event.get("scanCode", 0)
 		delay = event.get("delay", 0.0)
-		if isinstance(vk_code, bool) or not isinstance(vk_code, int) or not 1 <= vk_code <= 0xFF:
+		if action != "delay" and (
+			isinstance(vk_code, bool) or not isinstance(vk_code, int) or not 1 <= vk_code <= 0xFF
+		):
 			raise MacroValidationError("Event vkCode must be an integer from 1 to 255")
 		if isinstance(scan_code, bool) or not isinstance(scan_code, int) or not 0 <= scan_code <= 0xFFFF:
 			raise MacroValidationError("Event scanCode must be an integer from 0 to 65535")
 		if isinstance(delay, bool) or not isinstance(delay, (int, float)):
 			raise MacroValidationError("Event delay must be numeric")
-		delay = float(delay)
+		try:
+			delay = float(delay)
+		except OverflowError as error:
+			raise MacroValidationError("Event delay is outside the supported range") from error
 		if not math.isfinite(delay) or not 0 <= delay <= MAX_EVENT_DELAY_SECONDS:
 			raise MacroValidationError("Event delay is outside the supported range")
+		if action == "delay":
+			return {"action": "delay", "delay": delay}
+		if not isinstance(event.get("extended", False), bool):
+			raise MacroValidationError("Invalid extended-key flag")
 		return {
 			"action": action,
 			"vkCode": vk_code,
@@ -275,13 +319,19 @@ class MacroStorage:
 		speed = macro.get("speed", 1.0)
 		if isinstance(speed, bool) or not isinstance(speed, (int, float)):
 			raise MacroValidationError("Playback speed must be numeric")
-		speed = float(speed)
+		try:
+			speed = float(speed)
+		except OverflowError as error:
+			raise MacroValidationError("Playback speed is outside the supported range") from error
 		if not math.isfinite(speed) or not 0 <= speed <= MAX_PLAYBACK_SPEED:
 			raise MacroValidationError("Playback speed is outside the supported range")
 		start_delay = macro.get("start_delay", 0.0)
 		if isinstance(start_delay, bool) or not isinstance(start_delay, (int, float)):
 			raise MacroValidationError("Start delay must be numeric")
-		start_delay = float(start_delay)
+		try:
+			start_delay = float(start_delay)
+		except OverflowError as error:
+			raise MacroValidationError("Start delay is outside the supported range") from error
 		if not math.isfinite(start_delay) or not 0 <= start_delay <= MAX_START_DELAY_SECONDS:
 			raise MacroValidationError("Start delay is outside the supported range")
 		macro_id = macro.get("id")
@@ -476,7 +526,7 @@ class MacroStorage:
 
 
 class MacroEngine:
-	def __init__(self, safe_stop_callback=None):
+	def __init__(self, safe_stop_callback=None, recording_command_callback=None, command_resolver=None):
 		self.is_recording = False
 		self.is_playing = False
 		self.safe_mode = False
@@ -486,131 +536,200 @@ class MacroEngine:
 		self._hook_proc = HOOKPROC(self.low_level_keyboard_handler)
 		self.recorded_app = None
 		self.stop_playback_event = threading.Event()
-		self._safe_stop_callback = safe_stop_callback
-		self._safe_stop_requested = False
-		self._playback_thread = None
 		self._state_lock = threading.RLock()
+		self._playback_thread = None
+		self._physical_keys = set()
+		self._recorded_keys = set()
+		self._blocked_keys = set()
+		self._stop_event_index = None
+		self._nvda_modifier_mask = 6
+		self._initial_keys = set()
+		self._recording_started_at = 0.0
+		self._stop_requested_at = None
+		self._command_pending = False
+		self._recording_command_callback = recording_command_callback or (
+			(lambda action: safe_stop_callback()) if safe_stop_callback else None
+		)
+		self._command_resolver = command_resolver
+		self._ambiguous_initial_insert = False
 
-	def start_recording(self, safe_mode=False):
+	def _is_nvda_key(self, key):
+		vk, extended = key
+		return (vk == 20 and bool(self._nvda_modifier_mask & 1)) or (
+			vk == 45 and bool(self._nvda_modifier_mask & (4 if extended else 2))
+		)
+
+	def start_recording(self, safe_mode=False, initial_keys=()):
 		with self._state_lock:
-			if self.is_recording or self.is_playing:
+			if self.is_playing or self.is_recording:
 				return False
-			try:
-				hook_id = user32.SetWindowsHookExW(WH_KEYBOARD_LL, self._hook_proc, None, 0)
-			except OSError as error:
-				logHandler.log.error(f"NVDAMacroManager: Failed to install the keyboard hook: {error}")
-				return False
-			if not hook_id:
-				logHandler.log.error("NVDAMacroManager: Failed to install the low-level keyboard hook")
-				return False
+			self._nvda_modifier_mask = config.conf["keyboard"]["NVDAModifierKeys"]
 			self.events = []
-			self.is_recording = True
-			self.safe_mode = bool(safe_mode)
-			self.last_time = time.perf_counter()
-			self.hook_id = hook_id
+			self._recorded_keys.clear()
+			self._blocked_keys.clear()
+			self._stop_event_index = None
+			self._stop_requested_at = None
+			self._command_pending = False
+			# Sample outside the hook; inside it the async state is not yet updated.
+			self._physical_keys = {
+				(vk, key_metadata(vk)[1])
+				for vk in range(1, 256)
+				if vk not in {16, 17, 18} and user32.GetAsyncKeyState(vk) & 0x8000
+			}
+			# NVDA can swallow a shortcut before Windows updates its async key state.
+			known_keys = set(initial_keys) | getattr(keyboardHandler, "currentModifiers", set()).copy()
+			# GetAsyncKeyState cannot distinguish the two Insert locations.
+			self._ambiguous_initial_insert = bool(user32.GetAsyncKeyState(45) & 0x8000) and not any(
+				vk == 45 for vk, extended in known_keys
+			)
+			if any(vk == 45 for vk, extended in known_keys):
+				self._physical_keys = {key for key in self._physical_keys if key[0] != 45}
+			elif self._ambiguous_initial_insert:
+				self._physical_keys.update({(45, False), (45, True)})
+			self._physical_keys.update(known_keys)
+			self._initial_keys = self._physical_keys.copy()
+			self.safe_mode = safe_mode
 			self.recorded_app = get_foreground_app()
-			self._safe_stop_requested = False
+			self.last_time = time.perf_counter()
+			self._recording_started_at = self.last_time
+			try:
+				self.hook_id = user32.SetWindowsHookExW(WH_KEYBOARD_LL, self._hook_proc, None, 0)
+			except OSError as error:
+				logHandler.log.error(f"NVDAMacroManager: Could not install the recording hook: {error}")
+				return False
+			if not self.hook_id:
+				self.hook_id = None
+				logHandler.log.error("NVDAMacroManager: Could not install the keyboard recording hook.")
+				return False
+			self.is_recording = True
 		return True
 
 	def stop_recording(self):
-		with self._state_lock:
-			self.is_recording = False
-			hook_id = self.hook_id
-			self.hook_id = None
-			self._safe_stop_requested = False
-		if hook_id:
+		stopped_at = self._stop_requested_at if self._stop_requested_at is not None else time.perf_counter()
+		self.is_recording = False
+		if self.hook_id:
 			try:
-				if not user32.UnhookWindowsHookEx(hook_id):
-					logHandler.log.error("NVDAMacroManager: Failed to remove the low-level keyboard hook")
+				if not user32.UnhookWindowsHookEx(self.hook_id):
+					logHandler.log.error("NVDAMacroManager: Could not remove the recording hook.")
 			except OSError as error:
-				logHandler.log.error(f"NVDAMacroManager: Failed to remove the keyboard hook: {error}")
-		if self.recorded_app is None:
-			self.recorded_app = get_foreground_app()
-
-		while self.events and self.events[0]["action"] == "keyUp":
-			self.events.pop(0)
-
-		if self.events:
-			modifiers = {16, 17, 18, 20, 45, 91, 92, 96, 160, 161, 162, 163, 164, 165}
-			cut_index = len(self.events)
-			trigger_vk = None
-
-			for i in range(len(self.events) - 1, -1, -1):
-				e = self.events[i]
-				vk = e["vkCode"]
-				if vk not in modifiers:
-					if trigger_vk is None:
-						trigger_vk = vk
-					elif trigger_vk != vk:
-						break
-				cut_index = i
-				if e["delay"] > 0.5:
-					break
-			self.events = self.events[:cut_index]
-
-		pressed_keys = {}
-		for e in self.events:
-			key_id = (e["vkCode"], e["scanCode"], e.get("extended", False))
-			if e["action"] == "keyDown":
-				pressed_keys[key_id] = e
-			elif e["action"] == "keyUp":
-				pressed_keys.pop(key_id, None)
-
-		for e in pressed_keys.values():
-			self.events.append(
-				{
-					"action": "keyUp",
-					"vkCode": e["vkCode"],
-					"scanCode": e["scanCode"],
-					"extended": e["extended"],
-					"delay": 0.05,
-				},
-			)
+				logHandler.log.error(f"NVDAMacroManager: Could not remove the recording hook: {error}")
+			self.hook_id = None
+		if self._stop_event_index is not None:
+			self.events = self.events[: self._stop_event_index]
+		pressed = {}
+		for event in self.events:
+			key = (event["vkCode"], event["extended"])
+			if event["action"] == "keyDown":
+				pressed[key] = event
+			else:
+				pressed.pop(key, None)
+		release_delay = max(
+			0.0, stopped_at - self._recording_started_at - sum(e["delay"] for e in self.events)
+		)
+		for event in reversed(list(pressed.values())):
+			self.events.append(dict(event, action="keyUp", delay=release_delay))
+			release_delay = 0.0
+		self._recorded_keys.clear()
+		self._physical_keys.clear()
+		self._blocked_keys.clear()
+		self._initial_keys.clear()
 		return copy.deepcopy(self.events), self.recorded_app
 
-	def low_level_keyboard_handler(self, nCode, wParam, lParam):
-		try:
-			return self._low_level_keyboard_handler_impl(nCode, wParam, lParam)
-		except Exception as error:
-			logHandler.log.error(f"NVDAMacroManager: Keyboard hook error: {error}")
-			return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
+	def _is_stop_command(self, vk):
+		if not any(self._is_nvda_key(key) for key in self._physical_keys):
+			return False
+		keys = {key[0] for key in self._physical_keys}
+		if keys & {17, 18, 162, 163, 164, 165}:
+			return False
+		win = bool(keys & {91, 92})
+		shift = bool(keys & {16, 160, 161})
+		return (vk == 82 and win) or (vk == 77 and shift and not win)
 
-	def _low_level_keyboard_handler_impl(self, nCode, wParam, lParam):
-		if nCode >= 0 and self.is_recording:
-			keyboard_data = ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
-			injected = bool(keyboard_data.flags & LLKHF_INJECTED)
-			if not injected:
-				if wParam not in (WM_KEYDOWN, WM_SYSKEYDOWN, WM_KEYUP, WM_SYSKEYUP):
-					return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
+	def low_level_keyboard_handler(self, nCode, wParam, lParam):
+		if (
+			nCode < 0
+			or not self.is_recording
+			or ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents.flags & 0x10
+		):
+			return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
+		if wParam not in (WM_KEYDOWN, WM_SYSKEYDOWN, WM_KEYUP, WM_SYSKEYUP):
+			return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
+		try:
+			data = ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
+			vk = data.vkCode
+			key = (vk, bool(data.flags & 1))
+			down = wParam in (WM_KEYDOWN, WM_SYSKEYDOWN)
+			was_down = key in self._physical_keys
+			initial_key = key in self._initial_keys
+			if down:
+				self._physical_keys.add(key)
+			else:
+				self._physical_keys.discard(key)
+				self._initial_keys.discard(key)
+				if vk == 45 and initial_key and self._ambiguous_initial_insert:
+					self._physical_keys.discard((45, not key[1]))
+					self._initial_keys.discard((45, not key[1]))
+					self._ambiguous_initial_insert = False
+			if self._command_pending:
+				return 1 if self.safe_mode else user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
+			command = None
+			if down and not initial_key:
+				if self._command_resolver:
+					command = self._command_resolver(vk, data.scanCode, key[1], self._physical_keys)
+				elif self._is_stop_command(vk):
+					command = "open" if vk == 77 else "stop"
+			if command:
+				# Remove only the actual control chord, never arbitrary recent events.
+				index = len(self.events)
+				while index:
+					previous = self.events[index - 1]
+					previous_key = (previous["vkCode"], previous["extended"])
+					if (self._is_nvda_key(previous_key) or previous["vkCode"] in MODIFIER_KEYS) and previous[
+						"action"
+					] == "keyDown":
+						index -= 1
+					else:
+						break
+				self._stop_event_index = index
+				self._stop_requested_at = time.perf_counter()
+				if self.safe_mode:
+					self._command_pending = True
+					callback = self._recording_command_callback or (lambda action: self.stop_recording())
+					core.callLater(0, callback, command)
+					return 1
+			elif not initial_key and (
+				(down and not (was_down and (vk in MODIFIER_KEYS or self._is_nvda_key(key))))
+				or (not down and key in self._recorded_keys)
+			):
 				current_time = time.perf_counter()
-				delay = current_time - self.last_time
-				action = "keyDown" if wParam in (WM_KEYDOWN, WM_SYSKEYDOWN) else "keyUp"
-				vk = keyboard_data.vkCode
 				self.events.append(
 					{
-						"action": action,
+						"action": "keyDown" if down else "keyUp",
 						"vkCode": vk,
-						"scanCode": keyboard_data.scanCode,
-						"extended": bool(keyboard_data.flags & LLKHF_EXTENDED),
-						"delay": delay,
-					},
+						"scanCode": data.scanCode,
+						"extended": key[1],
+						"delay": current_time - self.last_time,
+					}
 				)
 				self.last_time = current_time
-
-				if self.safe_mode:
-					is_stop_gesture = (
-						action == "keyDown"
-						and vk == VK_R
-						and any(user32.GetAsyncKeyState(key) & 0x8000 for key in NVDA_MODIFIER_KEYS)
-						and bool(user32.GetAsyncKeyState(16) & 0x8000)
-						and bool(
-							user32.GetAsyncKeyState(91) & 0x8000 or user32.GetAsyncKeyState(92) & 0x8000,
-						)
-					)
-					if is_stop_gesture and not self._safe_stop_requested and self._safe_stop_callback:
-						self._safe_stop_requested = True
-						core.callLater(0, self._safe_stop_callback)
+				if down:
+					self._recorded_keys.add(key)
+				else:
+					self._recorded_keys.discard(key)
+			if self.safe_mode:
+				if not down:
+					if key in self._blocked_keys:
+						self._blocked_keys.discard(key)
+						return 1
+				else:
+					if not initial_key:
+						self._blocked_keys.add(key)
 					return 1
+		except Exception:
+			logHandler.log.error("NVDAMacroManager: Keyboard hook failed.")
+			# Never leak a failed safe-mode key-down into the application.
+			if self.safe_mode:
+				return 1
 		return user32.CallNextHookEx(self.hook_id, nCode, wParam, lParam)
 
 	@staticmethod
@@ -631,6 +750,10 @@ class MacroEngine:
 		inp.ii.ki.wVk = event["vkCode"]
 		inp.ii.ki.wScan = event["scanCode"]
 		flags = KEYEVENTF_EXTENDEDKEY if event.get("extended", False) else 0
+		# Pause uses an E1 sequence, which the extended-key flag cannot encode.
+		if event["scanCode"] and event["vkCode"] != 19:
+			flags |= KEYEVENTF_SCANCODE
+			inp.ii.ki.wVk = 0
 		if force_key_up or event["action"] == "keyUp":
 			flags |= KEYEVENTF_KEYUP
 		inp.ii.ki.dwFlags = flags
@@ -640,11 +763,51 @@ class MacroEngine:
 			raise OSError(ctypes.get_last_error(), "SendInput failed")
 
 	def _release_injected_keys(self, pressed_keys):
-		for event in reversed(list(pressed_keys.values())):
+		for key, event in reversed(list(pressed_keys.items())):
 			try:
 				self._send_key_event(event, force_key_up=True)
+				pressed_keys.pop(key, None)
 			except OSError as error:
 				logHandler.log.error(f"NVDAMacroManager: Failed to release an injected key: {error}")
+		return not pressed_keys
+
+	@staticmethod
+	def _input_key(event):
+		if event["vkCode"] == 19:
+			return ("vk", 19, False)
+		scan = event["scanCode"] or key_metadata(event["vkCode"])[0]
+		return ("scan" if scan else "vk", scan or event["vkCode"], event.get("extended", False))
+
+	def wait_for_trigger_release(self):
+		held = {vk for vk in range(1, 256) if user32.GetAsyncKeyState(vk) & 0x8000}
+		held.update(vk for vk, extended in keyboardHandler.currentModifiers.copy())
+		deadline = time.perf_counter() + 2.0
+		while held:
+			if self.stop_playback_event.is_set():
+				return False
+			nvda_modifiers = {vk for vk, extended in keyboardHandler.currentModifiers.copy()}
+			held = {vk for vk in held if vk in nvda_modifiers or user32.GetAsyncKeyState(vk) & 0x8000}
+			if not held:
+				break
+			if time.perf_counter() >= deadline:
+				raise OSError("Release held keyboard keys before starting playback")
+			self.stop_playback_event.wait(0.01)
+		return True
+
+	def _wait_delay(self, delay, target_app):
+		deadline = time.perf_counter() + delay
+		while True:
+			if not self._target_matches(target_app)[0]:
+				self.stop_playback_event.set()
+				return False
+			if self.stop_playback_event.is_set():
+				return False
+			remaining = deadline - time.perf_counter()
+			if remaining <= 0:
+				return True
+			interval = min(remaining, 0.05)
+			if self.stop_playback_event.wait(interval):
+				return False
 
 	def play_macro(self, events_to_play, loop_count=1, speed=1.0, target_app=None, start_delay=0.0):
 		try:
@@ -662,13 +825,15 @@ class MacroEngine:
 			speed = float(speed)
 			if not math.isfinite(speed) or not 0 <= speed <= MAX_PLAYBACK_SPEED:
 				raise MacroValidationError("Invalid playback speed")
+			if speed > 0 and any(not math.isfinite(event["delay"] / speed) for event in events):
+				raise MacroValidationError("Playback timing exceeds the supported range")
 			if isinstance(start_delay, bool) or not isinstance(start_delay, (int, float)):
 				raise MacroValidationError("Invalid start delay")
 			start_delay = float(start_delay)
 			if not math.isfinite(start_delay) or not 0 <= start_delay <= MAX_START_DELAY_SECONDS:
 				raise MacroValidationError("Invalid start delay")
 			target_app = MacroStorage._normalize_optional_app(target_app, "target_app")
-		except (MacroValidationError, TypeError) as error:
+		except (MacroValidationError, TypeError, OverflowError) as error:
 			logHandler.log.error(f"NVDAMacroManager: Refusing to play an invalid macro: {error}")
 			self._queue_message(_("Cannot play this macro because its data is invalid."))
 			return False
@@ -696,6 +861,10 @@ class MacroEngine:
 					if is_usable_target_application(current_app):
 						break
 					self.stop_playback_event.wait(0.05)
+				if self.stop_playback_event.is_set():
+					return
+				if not target_app and not is_usable_target_application(current_app):
+					raise OSError("No foreground application available for playback")
 
 				target_matches, current_app = self._target_matches(target_app)
 				if not target_matches:
@@ -704,8 +873,20 @@ class MacroEngine:
 					).format(target_app=target_app, current_app=current_app or _("unknown"))
 					return
 
-				if start_delay > 0 and self.stop_playback_event.wait(start_delay):
+				if not self.wait_for_trigger_release():
 					return
+				if start_delay > 0:
+					if target_app:
+						if not self._wait_delay(start_delay, target_app):
+							if not self._target_matches(target_app)[0]:
+								completion_message = _(
+									"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'."
+								).format(
+									target_app=target_app, current_app=get_foreground_app() or _("unknown")
+								)
+							return
+					elif self.stop_playback_event.wait(start_delay):
+						return
 
 				target_matches, current_app = self._target_matches(target_app)
 				if not target_matches:
@@ -720,11 +901,8 @@ class MacroEngine:
 					for event in events:
 						if self.stop_playback_event.is_set():
 							break
-						actual_delay = 0.005 if speed <= 0 else event["delay"] / speed
-						if event["action"] == "keyUp" and actual_delay < 0.035:
-							actual_delay = 0.035
-						if actual_delay > 0 and self.stop_playback_event.wait(actual_delay):
-							break
+						actual_delay = 0.0 if speed <= 0 else event["delay"] / speed
+						wait_completed = self._wait_delay(actual_delay, target_app)
 						target_matches, current_app = self._target_matches(target_app)
 						if not target_matches:
 							completion_message = _(
@@ -733,21 +911,36 @@ class MacroEngine:
 							).format(target_app=target_app, current_app=current_app or _("unknown"))
 							self.stop_playback_event.set()
 							break
+						if not wait_completed:
+							break
+						if event["action"] == "delay":
+							continue
 
+						key_id = self._input_key(event)
+						if event["action"] == "keyUp" and key_id not in pressed_keys:
+							continue
 						self._send_key_event(event)
-						key_id = (event["vkCode"], event["scanCode"], event["extended"])
 						if event["action"] == "keyDown":
 							pressed_keys[key_id] = event
 						else:
 							pressed_keys.pop(key_id, None)
-					if not self.stop_playback_event.is_set():
-						self.stop_playback_event.wait(0.1)
+					if not self._release_injected_keys(pressed_keys):
+						raise OSError("Could not release macro-held keys")
+					if loop_count == 0 and self.stop_playback_event.wait(0.001):
+						break
 					loop_idx += 1
 			except Exception as error:
 				logHandler.log.error(f"NVDAMacroManager: Macro playback error: {error}")
 				completion_message = _("Macro playback failed. See the NVDA log for details.")
 			finally:
-				self._release_injected_keys(pressed_keys)
+				if not self._release_injected_keys(pressed_keys):
+					completion_message = _("Macro playback failed. See the NVDA log for details.")
+				if not completion_message:
+					completion_message = (
+						_("Macro playback canceled.")
+						if self.stop_playback_event.is_set()
+						else _("Macro playback completed.")
+					)
 				with self._state_lock:
 					self.is_playing = False
 					self._playback_thread = None
@@ -758,12 +951,11 @@ class MacroEngine:
 				else:
 					self._queue_message(_("Macro playback completed."))
 
-		thread = threading.Thread(target=playback_thread)
-		thread.daemon = True
-		with self._state_lock:
-			self._playback_thread = thread
 		try:
-			thread.start()
+			with self._state_lock:
+				thread = threading.Thread(target=playback_thread, daemon=True)
+				self._playback_thread = thread
+				thread.start()
 		except Exception as error:
 			with self._state_lock:
 				self.is_playing = False
@@ -1143,21 +1335,24 @@ class AddEventDialog(wx.Dialog):
 		sel_type = self.type_values[self.type_combo.GetSelection()]
 		if sel_type == "delay":
 			val = self.delay_ctrl.GetValue().strip()
-			if val.isdigit():
-				self.new_event = {"type": "delay", "delay": int(val) / 1000.0}
-				self.EndModal(wx.ID_OK)
-			else:
+			try:
+				delay = parse_milliseconds(val)
+			except ValueError:
 				ui.message(_("Error: Please enter numbers only."))
+			else:
+				self.new_event = {"type": "delay", "delay": delay}
+				self.EndModal(wx.ID_OK)
 		else:
 			idx = self.key_combo.GetSelection()
 			if idx != wx.NOT_FOUND:
 				vk = self.VK_OPTIONS[idx][1]
 				if vk != 0:
+					scan, extended = key_metadata(vk)
 					self.new_event = {
 						"type": sel_type,
 						"vkCode": vk,
-						"scanCode": 0,
-						"extended": False,
+						"scanCode": scan,
+						"extended": extended,
 					}
 					if sel_type == "press":
 						self.new_event["hold"] = 0.035
@@ -1294,37 +1489,16 @@ class MacroEditDialog(wx.Dialog):
 		self.SetSizer(main_sizer)
 		self.Bind(wx.EVT_CHAR_HOOK, self.on_escape_press)
 
-		del_id = wx.NewIdRef()
-		up_id = wx.NewIdRef()
-		down_id = wx.NewIdRef()
-		undo_id = wx.NewIdRef()
-		redo_id = wx.NewIdRef()
-		copy_id = wx.NewIdRef()
-		cut_id = wx.NewIdRef()
-		paste_id = wx.NewIdRef()
-
-		self.Bind(wx.EVT_MENU, self.on_delete_event, id=del_id)
-		self.Bind(wx.EVT_MENU, self.on_move_up, id=up_id)
-		self.Bind(wx.EVT_MENU, self.on_move_down, id=down_id)
-		self.Bind(wx.EVT_MENU, self.on_undo, id=undo_id)
-		self.Bind(wx.EVT_MENU, self.on_redo, id=redo_id)
-		self.Bind(wx.EVT_MENU, self.on_copy, id=copy_id)
-		self.Bind(wx.EVT_MENU, self.on_cut, id=cut_id)
-		self.Bind(wx.EVT_MENU, self.on_paste, id=paste_id)
-
-		accel_tbl = wx.AcceleratorTable(
-			[
-				(wx.ACCEL_NORMAL, wx.WXK_DELETE, del_id),
-				(wx.ACCEL_CTRL, wx.WXK_UP, up_id),
-				(wx.ACCEL_CTRL, wx.WXK_DOWN, down_id),
-				(wx.ACCEL_CTRL, ord("Z"), undo_id),
-				(wx.ACCEL_CTRL, ord("Y"), redo_id),
-				(wx.ACCEL_CTRL, ord("C"), copy_id),
-				(wx.ACCEL_CTRL, ord("X"), cut_id),
-				(wx.ACCEL_CTRL, ord("V"), paste_id),
-			],
-		)
-		self.SetAcceleratorTable(accel_tbl)
+		self._list_shortcuts = {
+			(wx.WXK_DELETE, False): self.on_delete_event,
+			(wx.WXK_UP, True): self.on_move_up,
+			(wx.WXK_DOWN, True): self.on_move_down,
+			(ord("Z"), True): self.on_undo,
+			(ord("Y"), True): self.on_redo,
+			(ord("C"), True): self.on_copy,
+			(ord("X"), True): self.on_cut,
+			(ord("V"), True): self.on_paste,
+		}
 		wx.CallAfter(self.on_list_select, None)
 
 	def on_copy(self, event):
@@ -1403,35 +1577,45 @@ class MacroEditDialog(wx.Dialog):
 
 	def _linearize_events(self, events):
 		linear = []
-		i = 0
-		modifiers = {16, 17, 18, 20, 91, 92, 160, 161, 162, 163, 164, 165}
-		while i < len(events):
-			e1 = events[i]
-			if e1.get("delay", 0) > 0.001:
-				linear.append({"type": "delay", "delay": e1["delay"]})
-			if i + 1 < len(events) and e1["vkCode"] not in modifiers:
-				e2 = events[i + 1]
-				if e1["action"] == "keyDown" and e2["action"] == "keyUp" and e1["vkCode"] == e2["vkCode"]:
+		index = 0
+		while index < len(events):
+			event = events[index]
+			if event.get("delay", 0) > 0:
+				linear.append({"type": "delay", "delay": event["delay"]})
+			if (
+				event["action"] == "keyDown"
+				and event["vkCode"] not in MODIFIER_KEYS
+				and index + 1 < len(events)
+			):
+				following = events[index + 1]
+				if (
+					following["action"] == "keyUp"
+					and following["vkCode"] == event["vkCode"]
+					and following["scanCode"] == event["scanCode"]
+					and following.get("extended", False) == event.get("extended", False)
+					and following["delay"] <= SHORT_PRESS_LIMIT
+				):
 					linear.append(
 						{
 							"type": "press",
-							"vkCode": e1["vkCode"],
-							"scanCode": e1["scanCode"],
-							"extended": e1.get("extended", False),
-							"hold": e2.get("delay", 0.035),
-						},
+							"vkCode": event["vkCode"],
+							"scanCode": event["scanCode"],
+							"extended": event.get("extended", False),
+							"hold": following["delay"],
+						}
 					)
-					i += 2
+					index += 2
 					continue
-			linear.append(
-				{
-					"type": e1["action"],
-					"vkCode": e1["vkCode"],
-					"scanCode": e1["scanCode"],
-					"extended": e1.get("extended", False),
-				},
-			)
-			i += 1
+			if event["action"] != "delay":
+				linear.append(
+					{
+						"type": event["action"],
+						"vkCode": event["vkCode"],
+						"scanCode": event["scanCode"],
+						"extended": event.get("extended", False),
+					}
+				)
+			index += 1
 		return linear
 
 	def _rebuild_events(self, linear):
@@ -1448,9 +1632,9 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					},
+					}
 				)
-				current_delay = e.get("hold", 0.035)
+				current_delay = e.get("hold", STANDARD_PRESS_TIME)
 				rebuilt.append(
 					{
 						"action": "keyUp",
@@ -1458,7 +1642,7 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					},
+					}
 				)
 				current_delay = 0.0
 			else:
@@ -1469,9 +1653,11 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					},
+					}
 				)
 				current_delay = 0.0
+		if current_delay > 0:
+			rebuilt.append({"action": "delay", "delay": current_delay})
 		return rebuilt
 
 	def save_history(self):
@@ -1494,6 +1680,11 @@ class MacroEditDialog(wx.Dialog):
 
 	def on_escape_press(self, event):
 		active_win = wx.Window.FindFocus()
+		if active_win == self.events_list and not event.AltDown() and not event.ShiftDown():
+			handler = self._list_shortcuts.get((event.GetKeyCode(), event.ControlDown()))
+			if handler:
+				handler(None)
+				return
 		if event.GetKeyCode() == wx.WXK_ESCAPE:
 			if active_win == self.events_list:
 				for i in range(self.events_list.GetCount()):
@@ -1502,15 +1693,14 @@ class MacroEditDialog(wx.Dialog):
 				ui.message(_("Selection cleared."))
 			else:
 				self.EndModal(wx.ID_CANCEL)
-		elif event.GetKeyCode() == wx.WXK_SPACE and event.ControlDown():
-			if active_win == self.events_list:
-				idx = self.events_list.GetSelection()
-				if idx != wx.NOT_FOUND:
-					if self.events_list.IsSelected(idx):
-						self.events_list.Deselect(idx)
-					else:
-						self.events_list.Select(idx)
-					self.on_list_select(None)
+		elif active_win == self.events_list and event.GetKeyCode() == wx.WXK_SPACE and event.ControlDown():
+			idx = user32.SendMessageW(self.events_list.GetHandle(), 0x019F, 0, 0)  # LB_GETCARETINDEX
+			if 0 <= idx < self.events_list.GetCount():
+				if self.events_list.IsSelected(idx):
+					self.events_list.Deselect(idx)
+				else:
+					self.events_list.Select(idx)
+				self.on_list_select(None)
 		else:
 			event.Skip()
 
@@ -1522,8 +1712,7 @@ class MacroEditDialog(wx.Dialog):
 				str_list.append(f"{ui_idx}. {_('Wait')}: {int(e['delay'] * 1000)} ms")
 			elif e["type"] == "press":
 				key_name = get_key_name(e["vkCode"], e["scanCode"], e["extended"])
-				hold_ms = int(e.get("hold", 0.035) * 1000)
-				str_list.append(f"{ui_idx}. {_('Press')}: {key_name} ({_('hold')}: {hold_ms} ms)")
+				str_list.append(f"{ui_idx}. {_('Press')}: {key_name}")
 			elif e["type"] == "keyDown":
 				key_name = get_key_name(e["vkCode"], e["scanCode"], e["extended"])
 				str_list.append(f"{ui_idx}. {_('Key Down')}: {key_name}")
@@ -1568,9 +1757,12 @@ class MacroEditDialog(wx.Dialog):
 			)
 			if dlg.ShowModal() == wx.ID_OK:
 				val = dlg.GetValue().strip()
-				if val.isdigit():
+				try:
+					new_delay_sec = parse_milliseconds(val)
+				except ValueError:
+					ui.message(_("Error: Please enter numbers only."))
+				else:
 					self.save_history()
-					new_delay_sec = int(val) / 1000.0
 					for s in sels:
 						if self.linear_events[s]["type"] == "delay":
 							self.linear_events[s]["delay"] = new_delay_sec
@@ -1580,8 +1772,6 @@ class MacroEditDialog(wx.Dialog):
 					for s in sels:
 						self.events_list.SetSelection(s)
 					ui.message(_("Wait time updated."))
-				else:
-					ui.message(_("Error: Please enter numbers only."))
 			dlg.Destroy()
 			wx.CallAfter(self.on_list_select, None)
 			self.events_list.SetFocus()
@@ -1808,11 +1998,6 @@ class MacroManagerDialog(wx.Dialog):
 		self.SetSizer(main_sizer)
 		self.Bind(wx.EVT_CHAR_HOOK, self.on_escape_press)
 
-		del_id = wx.NewIdRef()
-		self.Bind(wx.EVT_MENU, self.on_delete_click, id=del_id)
-		accel_tbl = wx.AcceleratorTable([(wx.ACCEL_NORMAL, wx.WXK_DELETE, del_id)])
-		self.SetAcceleratorTable(accel_tbl)
-
 		self.refresh_list()
 		if self.storage.macros:
 			self.macro_list.SetSelection(0)
@@ -1832,6 +2017,8 @@ class MacroManagerDialog(wx.Dialog):
 	def on_escape_press(self, event):
 		if event.GetKeyCode() == wx.WXK_ESCAPE:
 			self.on_close_click(None)
+		elif event.GetKeyCode() == wx.WXK_DELETE and wx.Window.FindFocus() == self.macro_list:
+			self.on_delete_click(None)
 		else:
 			event.Skip()
 
@@ -1842,26 +2029,28 @@ class MacroManagerDialog(wx.Dialog):
 		sels = list(self.macro_list.GetSelections())
 		if sels and self.storage.macros:
 			macro = self.storage.macros[sels[0]]
-			self.Destroy()
-			self.engine.play_macro(
+			started = self.engine.play_macro(
 				macro["events"],
 				macro.get("loop_count", 1),
 				float(macro.get("speed", 1.0)),
 				macro.get("target_app", None),
 				float(macro.get("start_delay", 0.0)),
 			)
+			if started:
+				self.Destroy()
 
 	def on_edit_click(self, event):
 		sels = list(self.macro_list.GetSelections())
 		if sels and self.storage.macros:
 			macro = self.storage.macros[sels[0]]
 			dlg = MacroEditDialog(self, macro, self.active_app)
-			if dlg.ShowModal() == wx.ID_OK:
+			while dlg.ShowModal() == wx.ID_OK:
 				try:
 					self.storage.update_macro(sels[0], dlg.get_updated_data())
 					ui.message(_("Macro updated successfully."))
 					self.refresh_list()
 					self.macro_list.SetSelection(sels[0])
+					break
 				except (MacroValidationError, MacroStorageError) as error:
 					logHandler.log.error(f"NVDAMacroManager: Failed to update macro: {error}")
 					ui.message(_("Could not update the macro. See the NVDA log for details."))
@@ -2018,7 +2207,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self):
 		super(GlobalPlugin, self).__init__()
 		self.last_external_app = get_active_application()
-		self.engine = MacroEngine(safe_stop_callback=self._stop_recording_and_notify)
+		self.engine = MacroEngine(recording_command_callback=self._on_recording_command)
 		self.storage = MacroStorage(update_scripts_callback=self.inject_dynamic_scripts)
 		self.gui_instance = None
 		self.last_recorded_events = []
@@ -2033,7 +2222,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		for m in self.storage.macros:
 			macro_id = m["id"]
-			safe_id = re.sub(r"[^0-9A-Za-z_]", "_", str(macro_id))
+			safe_id = macro_script_id(macro_id)
 			func_name = f"script_dynmacro_{safe_id}"
 
 			def make_script(current_macro_id, fname):
@@ -2050,14 +2239,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 							f"NVDAMacroManager: Dynamic script could not find macro {current_macro_id}",
 						)
 						return
-					ui.message(_("Playing: {name}").format(name=macro_data["name"]))
-					self_inst.engine.play_macro(
+					if self_inst._start_playback(
 						macro_data["events"],
 						macro_data.get("loop_count", 1),
-						float(macro_data.get("speed", 1.0)),
+						macro_data.get("speed", 1.0),
 						macro_data.get("target_app", None),
-						float(macro_data.get("start_delay", 0.0)),
-					)
+						macro_data.get("start_delay", 0.0),
+					):
+						ui.message(_("Playing: {name}").format(name=macro_data["name"]))
 
 				_script_func.__name__ = fname
 				_script_func.__qualname__ = f"GlobalPlugin.{fname}"
@@ -2069,9 +2258,76 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			)(make_script(macro_id, func_name))
 			setattr(cls, func_name, decorated_script)
 
+	def _on_recording_command(self, action):
+		if not self.engine.is_recording:
+			return
+		self._stop_recording_and_notify()
+		if action == "open":
+			self.script_openMacroInterface(None)
+
+	def _refresh_recording_commands(self):
+		self._recording_commands = {}
+		self._recording_command_keys = set()
+		actions = {
+			"toggleMacroRecordingLive": "stop",
+			"toggleMacroRecordingSafe": "stop",
+			"openMacroInterface": "open",
+		}
+		try:
+			mappings = inputCore.manager.getAllGestureMappings()
+			for category in mappings.values():
+				for info in category.values():
+					if info.cls is not self.__class__ or info.scriptName not in actions:
+						continue
+					for identifier in info.gestures:
+						source, name = identifier.split(":", 1)
+						if source not in {"kb", "kb(%s)" % config.conf["keyboard"]["keyboardLayout"]}:
+							continue
+						gesture = keyboardHandler.KeyboardInputGesture.fromName(name)
+						self._recording_command_keys.add(gesture.vkCode)
+						self._recording_commands[inputCore.normalizeGestureIdentifier(identifier)] = actions[
+							info.scriptName
+						]
+			self.engine._command_resolver = self._resolve_recording_command
+		except Exception:
+			logHandler.log.error(
+				"NVDAMacroManager: Could not load recording control gestures; using defaults."
+			)
+			self.engine._command_resolver = None
+
+	def _resolve_recording_command(self, vk, scan, extended, physical_keys):
+		if vk not in self._recording_command_keys:
+			return None
+		modifiers = {
+			key
+			for key in physical_keys
+			if key != (vk, extended) and (key[0] in MODIFIER_KEYS or self.engine._is_nvda_key(key))
+		}
+		gesture = keyboardHandler.KeyboardInputGesture(modifiers, vk, scan, extended)
+		for identifier in gesture.identifiers:
+			action = self._recording_commands.get(inputCore.normalizeGestureIdentifier(identifier))
+			if action:
+				return action
+		return None
+
+	@staticmethod
+	def _shortcut_keys(gesture):
+		keys: set[tuple[int, bool]] = set(getattr(gesture, "modifiers", ()))
+		if getattr(gesture, "vkCode", None) is not None:
+			keys.add((gesture.vkCode, bool(gesture.isExtended)))
+		return keys
+
 	def clear_buffer(self):
 		self.last_recorded_events = []
 		self.last_recorded_app = None
+
+	def _start_playback(self, events, loop_count=1, speed=1.0, target_app=None, start_delay=0.0):
+		try:
+			return self.engine.play_macro(events, loop_count, speed, target_app, start_delay)
+		except (OSError, ValueError, RuntimeError) as error:
+			logHandler.log.error(f"NVDAMacroManager: Could not start playback from a shortcut: {error}")
+			ui.message(_("Macro playback failed. See the NVDA log for details."))
+			return False
 
 	def event_gainFocus(self, obj, nextHandler):
 		app_name = get_app_name_from_nvda_object(obj)
@@ -2086,7 +2342,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	def script_toggleMacroRecordingLive(self, gesture):
 		if not self.engine.is_recording:
-			if self.engine.start_recording(safe_mode=False):
+			self._refresh_recording_commands()
+			if self.engine.start_recording(safe_mode=False, initial_keys=self._shortcut_keys(gesture)):
 				ui.message(_("Live macro recording started."))
 			else:
 				ui.message(_("Could not start macro recording. See the NVDA log for details."))
@@ -2100,7 +2357,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	def script_toggleMacroRecordingSafe(self, gesture):
 		if not self.engine.is_recording:
-			if self.engine.start_recording(safe_mode=True):
+			self._refresh_recording_commands()
+			if self.engine.start_recording(safe_mode=True, initial_keys=self._shortcut_keys(gesture)):
 				ui.message(_("Safe macro recording started. Keys are hidden."))
 			else:
 				ui.message(_("Could not start macro recording. See the NVDA log for details."))
@@ -2128,8 +2386,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		elif self.engine.is_recording:
 			ui.message(_("Please stop recording first."))
 		else:
-			ui.message(_("Playing temporary macro..."))
-			self.engine.play_macro(self.last_recorded_events, 1, 1.0, None)
+			if self._start_playback(self.last_recorded_events):
+				ui.message(_("Playing temporary macro..."))
 
 	@scriptHandler.script(
 		description=_("Opens the Macro Manager interface."),

@@ -1,7 +1,7 @@
 # NVDAMacroManager (Modern Makro IDE ve Otomasyon Motoru)
 
 **Geliştirici:** Muhammet Enes Şenovalı
-**Sürüm:** 1.2.6
+**Sürüm:** 1.2.9
 
 NVDA Macro Manager, NVDA ekran okuyucusuyla bütünleşen, erişilebilirlik odaklı bir klavye makrosu kayıt, düzenleme ve oynatma motorudur. Hedef uygulamanın ve kaydedilen tuş dizisinin bilindiği tekrarlanabilir masaüstü iş akışları için tasarlanmıştır.
 
@@ -55,3 +55,11 @@ Makronuzu kaydettikten sonra NVDA menüsünden `Tercihler -> Girdi Hareketleri` 
 ## 🔒 Veri ve Güvenlik
 
 Kayıtlı makrolar etkin NVDA yapılandırma dizininde tutulur. Yazımlar atomik yapılır ve önceki dosya `.bak` yedeği olarak saklanır. İçe aktarılan makroları inceleyin, önce kritik olmayan bir uygulamada deneyin ve mümkün olduğunda uygulama kilidi kullanın. Bazı korumalı, yönetici yetkili, uzak veya oyun uygulamaları benzetilmiş girdiyi reddedebilir.
+
+## 1.2.9: Adımlar ve kayıt kontrolü
+
+Yeni eklenen **Bas-Çek** adımları standart 35 ms basış kullanır; ayrı bir basılı tutma süresi alanı gösterilmez. Kayıttan gelen kısa basışların özgün süresi korunur. 200 ms'den uzun basışlar **Tuş Aşağı → Bekle → Tuş Yukarı** olarak görünür. Ctrl, Alt, Shift ve Windows ayrı aşağı/yukarı adımlarıdır. Süreleri **Bekle** adımlarından değiştirebilirsiniz; sondaki beklemeler de kaydedilir.
+
+Güvenli kaydı kayıt kısayoluyla durdurabilirsiniz. Girdi Hareketleri menüsünde kayıt veya yöneticiyi açma komutlarına atadığınız klavye kısayolları da tanınır. Başlatma birleşimini basılı tutmak tekrar kayıt/durdurma olayı oluşturmaz. Bir tuş basılıyken kayıt durdurulursa geçen basılı tutma süresi korunur.
+
+Oynatma, başlangıçta basılı olan tuşları bırakmanızı bekler; iki saniye içinde bırakılmazlarsa hata bildirir. Bu bekleme makronun ayrı başlangıç gecikmesinden öncedir. Başlangıç gecikmesi ilk döngüden önce bir kez uygulanır ve hızdan etkilenmez. Hız 0 olay beklemelerini atlar; döngü 0 durdurulana kadar tekrar anlamına gelir. Ctrl+Alt+Delete, Windows'un güvenli masaüstü birleşimidir ve eklenti tarafından engellenemez.
