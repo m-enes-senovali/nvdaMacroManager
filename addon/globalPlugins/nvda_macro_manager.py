@@ -624,7 +624,8 @@ class MacroEngine:
 			else:
 				pressed.pop(key, None)
 		release_delay = max(
-			0.0, stopped_at - self._recording_started_at - sum(e["delay"] for e in self.events)
+			0.0,
+			stopped_at - self._recording_started_at - sum(e["delay"] for e in self.events),
 		)
 		for event in reversed(list(pressed.values())):
 			self.events.append(dict(event, action="keyUp", delay=release_delay))
@@ -709,7 +710,7 @@ class MacroEngine:
 						"scanCode": data.scanCode,
 						"extended": key[1],
 						"delay": current_time - self.last_time,
-					}
+					},
 				)
 				self.last_time = current_time
 				if down:
@@ -880,9 +881,10 @@ class MacroEngine:
 						if not self._wait_delay(start_delay, target_app):
 							if not self._target_matches(target_app)[0]:
 								completion_message = _(
-									"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'."
+									"Security Warning: Macro locked to '{target_app}'. Current: '{current_app}'.",
 								).format(
-									target_app=target_app, current_app=get_foreground_app() or _("unknown")
+									target_app=target_app,
+									current_app=get_foreground_app() or _("unknown"),
 								)
 							return
 					elif self.stop_playback_event.wait(start_delay):
@@ -1602,7 +1604,7 @@ class MacroEditDialog(wx.Dialog):
 							"scanCode": event["scanCode"],
 							"extended": event.get("extended", False),
 							"hold": following["delay"],
-						}
+						},
 					)
 					index += 2
 					continue
@@ -1613,7 +1615,7 @@ class MacroEditDialog(wx.Dialog):
 						"vkCode": event["vkCode"],
 						"scanCode": event["scanCode"],
 						"extended": event.get("extended", False),
-					}
+					},
 				)
 			index += 1
 		return linear
@@ -1632,7 +1634,7 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					}
+					},
 				)
 				current_delay = e.get("hold", STANDARD_PRESS_TIME)
 				rebuilt.append(
@@ -1642,7 +1644,7 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					}
+					},
 				)
 				current_delay = 0.0
 			else:
@@ -1653,7 +1655,7 @@ class MacroEditDialog(wx.Dialog):
 						"scanCode": e["scanCode"],
 						"extended": e["extended"],
 						"delay": current_delay,
-					}
+					},
 				)
 				current_delay = 0.0
 		if current_delay > 0:
@@ -2291,7 +2293,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.engine._command_resolver = self._resolve_recording_command
 		except Exception:
 			logHandler.log.error(
-				"NVDAMacroManager: Could not load recording control gestures; using defaults."
+				"NVDAMacroManager: Could not load recording control gestures; using defaults.",
 			)
 			self.engine._command_resolver = None
 

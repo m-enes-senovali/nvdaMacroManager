@@ -50,10 +50,14 @@ class RecordingTests(unittest.TestCase):
 
 	def emit(self, vk, down, scan=30, extended=False, injected=False):
 		data = plugin.KBDLLHOOKSTRUCT(
-			vkCode=vk, scanCode=scan, flags=(1 if extended else 0) | (16 if injected else 0)
+			vkCode=vk,
+			scanCode=scan,
+			flags=(1 if extended else 0) | (16 if injected else 0),
 		)
 		return self.engine.low_level_keyboard_handler(
-			0, plugin.WM_KEYDOWN if down else plugin.WM_KEYUP, ctypes.pointer(data)
+			0,
+			plugin.WM_KEYDOWN if down else plugin.WM_KEYUP,
+			ctypes.pointer(data),
 		)
 
 	def test_ctrl_space_modifier_repeat_is_filtered(self):
@@ -169,7 +173,8 @@ class RecordingTests(unittest.TestCase):
 					self.engine.start_recording(safe_mode=True)
 					for vk in order:
 						self.assertEqual(
-							self.emit(vk, True, extended=extended if vk == nvda else vk == 91), 1
+							self.emit(vk, True, extended=extended if vk == nvda else vk == 91),
+							1,
 						)
 					self.assertEqual(self.emit(82, True), 1)
 					self.emit(82, True)
@@ -306,7 +311,7 @@ class EditorTests(unittest.TestCase):
 							event["scanCode"],
 							event.get("extended", False),
 							elapsed,
-						)
+						),
 					)
 			return steps, elapsed
 
@@ -370,7 +375,7 @@ class CommandIntegrationTests(unittest.TestCase):
 			@classmethod
 			def fromName(cls, name):
 				return types.SimpleNamespace(
-					vkCode=120 if "f9" in name else 82 if "r" in name.split("+") else 77
+					vkCode=120 if "f9" in name else 82 if "r" in name.split("+") else 77,
 				)
 
 		self.patches = [
@@ -399,14 +404,20 @@ class CommandIntegrationTests(unittest.TestCase):
 		self.load_mappings([self.info()])
 		self.assertEqual(
 			self.instance._resolve_recording_command(
-				120, 67, False, {(120, False), (162, False), (164, False)}
+				120,
+				67,
+				False,
+				{(120, False), (162, False), (164, False)},
 			),
 			"stop",
 		)
 		self.assertIsNone(
 			self.instance._resolve_recording_command(
-				120, 67, False, {(120, False), (162, False), (164, False), (160, False)}
-			)
+				120,
+				67,
+				False,
+				{(120, False), (162, False), (164, False), (160, False)},
+			),
 		)
 
 	def test_other_layout_and_other_plugins_are_not_recorder_commands(self):
@@ -420,7 +431,7 @@ class CommandIntegrationTests(unittest.TestCase):
 			"open",
 		)
 		self.assertIsNone(
-			self.instance._resolve_recording_command(82, 19, False, {(82, False), (45, True), (91, True)})
+			self.instance._resolve_recording_command(82, 19, False, {(82, False), (45, True), (91, True)}),
 		)
 
 	def test_mapping_api_failure_preserves_default_stop_fallback(self):
@@ -496,7 +507,10 @@ class InterfaceTests(unittest.TestCase):
 
 	def event(self, code, ctrl=False):
 		return Mock(
-			GetKeyCode=lambda: code, ControlDown=lambda: ctrl, AltDown=lambda: False, ShiftDown=lambda: False
+			GetKeyCode=lambda: code,
+			ControlDown=lambda: ctrl,
+			AltDown=lambda: False,
+			ShiftDown=lambda: False,
 		)
 
 	def test_text_field_copy_is_not_macro_copy(self):

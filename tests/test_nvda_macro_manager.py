@@ -80,7 +80,7 @@ def _install_nvda_stubs(config_path: str):
 		),
 		"core": types.SimpleNamespace(callLater=lambda _delay, callback, *args: callback(*args)),
 		"config": types.SimpleNamespace(
-			conf={"keyboard": {"NVDAModifierKeys": 6, "keyboardLayout": "desktop"}}
+			conf={"keyboard": {"NVDAModifierKeys": 6, "keyboardLayout": "desktop"}},
 		),
 		"keyboardHandler": types.SimpleNamespace(currentModifiers=set()),
 		"inputCore": types.SimpleNamespace(),

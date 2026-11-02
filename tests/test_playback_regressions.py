@@ -40,7 +40,9 @@ class PlaybackRegressions(unittest.TestCase):
 	def test_worker_start_failure_can_be_retried(self):
 		engine = self.module.MacroEngine()
 		with mock.patch.object(
-			self.module.threading.Thread, "start", side_effect=RuntimeError("unavailable")
+			self.module.threading.Thread,
+			"start",
+			side_effect=RuntimeError("unavailable"),
 		):
 			self.assertFalse(engine.play_macro([self._event()]))
 		engine.shutdown()
@@ -119,7 +121,7 @@ class PlaybackRegressions(unittest.TestCase):
 
 		engine._send_key_event = send
 		self.assertTrue(
-			engine.play_macro([self._event(), self._event("keyUp", delay=20)], target_app="target")
+			engine.play_macro([self._event(), self._event("keyUp", delay=20)], target_app="target"),
 		)
 		self.assertTrue(sent.wait(timeout=1))
 		thread = engine._playback_thread
@@ -132,7 +134,9 @@ class PlaybackRegressions(unittest.TestCase):
 		engine = self.module.MacroEngine()
 		self.user32.async_keys = {162}
 		with mock.patch.object(
-			engine.stop_playback_event, "wait", side_effect=lambda _delay: self.user32.async_keys.clear()
+			engine.stop_playback_event,
+			"wait",
+			side_effect=lambda _delay: self.user32.async_keys.clear(),
 		):
 			self.assertTrue(engine.wait_for_trigger_release())
 		self.assertEqual([], self.user32.sent)
@@ -142,7 +146,9 @@ class PlaybackRegressions(unittest.TestCase):
 		modifiers = self.stubs["keyboardHandler"].currentModifiers
 		modifiers.add((45, True))
 		with mock.patch.object(
-			engine.stop_playback_event, "wait", side_effect=lambda _delay: modifiers.clear()
+			engine.stop_playback_event,
+			"wait",
+			side_effect=lambda _delay: modifiers.clear(),
 		) as wait:
 			self.assertTrue(engine.wait_for_trigger_release())
 		wait.assert_called_once_with(0.01)
@@ -234,7 +240,10 @@ class PlaybackRegressions(unittest.TestCase):
 		dialog = mock.Mock()
 		dialog.ShowModal.side_effect = [1, 2]
 		manager = types.SimpleNamespace(
-			macro_list=mock.Mock(), storage=mock.Mock(), active_app="target", refresh_list=mock.Mock()
+			macro_list=mock.Mock(),
+			storage=mock.Mock(),
+			active_app="target",
+			refresh_list=mock.Mock(),
 		)
 		manager.macro_list.GetSelections.return_value = [0]
 		manager.storage.macros = [{"events": [self._event()]}]
@@ -250,7 +259,9 @@ class PlaybackRegressions(unittest.TestCase):
 
 	def test_manager_delete_key_preserves_text_field(self):
 		manager = types.SimpleNamespace(
-			macro_list=object(), on_delete_click=mock.Mock(), on_close_click=mock.Mock()
+			macro_list=object(),
+			on_delete_click=mock.Mock(),
+			on_close_click=mock.Mock(),
 		)
 		event = mock.Mock()
 		event.GetKeyCode.return_value = 127
@@ -258,7 +269,10 @@ class PlaybackRegressions(unittest.TestCase):
 			mock.patch.object(self.module.wx, "WXK_ESCAPE", 27, create=True),
 			mock.patch.object(self.module.wx, "WXK_DELETE", 127, create=True),
 			mock.patch.object(
-				self.module.wx, "Window", types.SimpleNamespace(FindFocus=lambda: object()), create=True
+				self.module.wx,
+				"Window",
+				types.SimpleNamespace(FindFocus=lambda: object()),
+				create=True,
 			),
 		):
 			self.module.MacroManagerDialog.on_escape_press(manager, event)
